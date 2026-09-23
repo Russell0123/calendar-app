@@ -32,6 +32,7 @@ export function init() {
     if (s && s.version === 2) {
       state = s; TABLES.forEach(t => (state[t] ??= {}));
       state.sync ??= blankSync();
+      fixOrphans();
       // 一次性：課程連上科目標籤，並移除舊的科目標籤
       if (!state.meta.course_tags_v1) { calendars().forEach(c => linkCourses(c.id, true)); state.meta.course_tags_v1 = true; persist(); }
       // 一次性：首頁不再有隨手記，舊的隨手記轉成當天的任務
@@ -79,12 +80,24 @@ function linkCourses(cal, dropOld) {
   if (dropOld) all('tags', t => t.calendar_id === cal && t.group === SUBJECT && OLD_SUBJECTS.includes(t.name)).forEach(t => { softDelete('tags', t.id); stripTag(t.id); });
 }
 
+// 沒有行事曆的資料（舊版在「改用雲端資料」後新增的）歸到第一個行事曆，並同步上去
+function fixOrphans() {
+  const cal = calId();
+  if (!cal) return 0;
+  let n = 0;
+  SCOPED.forEach(t => Object.values(state[t]).forEach(r => {
+    if (!r.deleted_at && !r.calendar_id) { r.calendar_id = cal; r.updated_at = now(); markDirty(t, r.id); n++; }
+  }));
+  if (n) persist();
+  return n;
+}
+
 // ---------- 通用 CRUD ----------
 function rawPut(table, row) {
   const id = row.id || uid();
   const r = { ...(state[table][id] || {}), ...row, id, updated_at: now() };
   r.created_at ??= r.updated_at;
-  if (SCOPED.includes(table)) r.calendar_id ??= state.meta.current_calendar_id;
+  if (SCOPED.includes(table)) r.calendar_id ??= calId();
   state[table][id] = r;
   markDirty(table, id);
   return r;
@@ -302,7 +315,7 @@ export function applyRemote(records) {
       changed = true;
     }
   }
-  if (changed) emit(false); else persist();
+  if (changed) { fixOrphans(); emit(false); } else persist();
   return changed;
 }
 
