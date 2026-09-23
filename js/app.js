@@ -11,6 +11,10 @@ import { renderFlow } from './pages/flow.js';
 
 window.openTask = openTask;
 db.init();
+// 主題色：黑（預設）／螢光綠
+const applyAccent = () => (document.documentElement.dataset.accent = db.meta().accent || 'ink');
+applyAccent();
+db.onChange(applyAccent);
 // 網路優先的快取：更新馬上看得到，離線也能開
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用

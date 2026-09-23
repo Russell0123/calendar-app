@@ -19,7 +19,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 button { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 12px; cursor: pointer; white-space: nowrap; }
 button:hover { background: var(--hover); }
-button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 button.primary:hover { opacity: .88; }
 button.danger, .danger { color: var(--danger); }
 button.icon { border: none; background: none; padding: 2px 8px; color: var(--muted); }
@@ -62,12 +62,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .page-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 10px; margin-bottom: 12px; border-bottom: 2px solid var(--rule); }
 .page-bar b { font-size: 16px; }
 .month-title { min-width: 96px; text-align: center; }
-.seg { display: inline-flex; border: 1px solid var(--ink); border-radius: var(--r); overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--accent-line); border-radius: var(--r); overflow: hidden; }
 .seg button { border: none; border-radius: 0; padding: 3px 12px; background: none; }
-.seg button.on { background: var(--ink); color: var(--bg); }
+.seg button.on { background: var(--accent); color: var(--on-accent); }
 .tabs { display: flex; gap: 2px; overflow-x: auto; }
 .tabs button { border: none; background: none; color: var(--muted); padding: 3px 10px; }
-.tabs button.on { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--ink); border-radius: 0; }
+.tabs button.on { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent-line); border-radius: 0; }
 
 /* ---------- 區塊 ---------- */
 .block { padding: 4px 0 14px; }
@@ -77,7 +77,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 /* 任務列 */
 .task { display: flex; gap: 10px; align-items: flex-start; padding: 7px 4px; border-bottom: 1px solid var(--line); }
 .task:hover { background: var(--hover); }
-.task > input[type=checkbox] { margin-top: 4px; accent-color: var(--ink); }
+.task > input[type=checkbox] { margin-top: 4px; accent-color: var(--accent-line); }
 .task-main { flex: 1; min-width: 0; cursor: pointer; }
 .task-title { overflow-wrap: anywhere; }
 .task-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 2px; }
@@ -132,11 +132,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .wk-date { font-size: 18px; font-weight: 700; }
 .wk-col.today .wk-date { color: var(--today); }
 .wk-item { font-size: 13px; border-radius: 3px; padding: 4px 6px; margin-bottom: 4px; cursor: pointer; background: var(--soft); }
-.wk-item.routine { background: var(--ink); color: var(--bg); }
+.wk-item.routine { background: var(--accent); color: var(--on-accent); }
 .wk-item.done { opacity: .5; text-decoration: line-through; }
 .wk-time { font-size: 11px; opacity: .75; }
 .chip.day { cursor: pointer; background: var(--soft); color: var(--muted); padding: 0 10px; }
-.chip.day.on { background: var(--ink); color: var(--bg); }
+.chip.day.on { background: var(--accent); color: var(--on-accent); }
 
 /* ---------- 月曆 ---------- */
 .cal-month { border-left: 1px solid var(--line); }
@@ -149,7 +149,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .cal-num.out { color: var(--muted); }
 .cal-num span { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 99px; }
 .cal-num.today span { color: var(--today); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--today); }
-.cal-num.sel span { background: var(--ink); color: var(--bg); box-shadow: none; }
+.cal-num.sel span { background: var(--accent); color: var(--on-accent); box-shadow: none; }
 /* 六週剛好塞進一個畫面高（扣掉頂欄、頁籤、工具列、星期列約 240px） */
 .cal-week { min-height: max(92px, calc((100dvh - 240px) / 6)); }
 .ev { margin: 0 3px; padding: 1px 6px; border-radius: 3px; font-size: 12px; line-height: 17px; overflow: hidden; cursor: pointer; min-width: 0; }
@@ -199,7 +199,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .board-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 9px; margin-bottom: 6px; cursor: pointer; }
 .board-card.lifted { opacity: .35; }
 .board-card.ghost { position: fixed; z-index: 50; pointer-events: none; transform: rotate(2deg); box-shadow: 0 8px 20px rgba(0,0,0,.2); margin: 0; }
-.board-card:hover { border-color: var(--ink); }
+.board-card:hover { border-color: var(--accent-line); }
 .board-card .chips { margin-top: 4px; }
 
 /* ---------- 流程圖 ---------- */
@@ -224,11 +224,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .node-title { font-weight: 700; font-size: 14px; }
 .node-when { font-size: 12px; color: var(--muted); }
 .node .chips { margin-top: 4px; }
-.node-port { position: absolute; right: -9px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 99px; background: var(--ink); border: 4px solid var(--paper); cursor: crosshair; }
+.node-port { position: absolute; right: -9px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 99px; background: var(--accent-line); border: 4px solid var(--paper); cursor: crosshair; }
 .node-port:hover { background: var(--today); }
 .flow-tip { position: absolute; left: 10px; top: 10px; right: 10px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; pointer-events: none; font-size: 13px; }
 .flow-tip > * { pointer-events: auto; }
-.flow-tip b { background: var(--ink); color: var(--bg); padding: 3px 8px; border-radius: var(--r); }
+.flow-tip b { background: var(--accent); color: var(--on-accent); padding: 3px 8px; border-radius: var(--r); }
 .flow-zoom { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; }
 .flow-zoom button { padding: 2px 10px; }
 
@@ -280,7 +280,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .tp-row.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
 .tp-row.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
 .chip.gpick { cursor: pointer; background: var(--soft); color: var(--muted); }
-.chip.gpick.on { background: var(--ink); color: var(--bg); }
+.chip.gpick.on { background: var(--accent); color: var(--on-accent); }
 .gnew { width: 90px; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; padding: 0 2px; font-size: 12.5px; }
 .gnew:focus { outline: none; border-bottom-color: var(--ink); }
 .check-mark { font-size: 13px; }
@@ -307,7 +307,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .set-row { display: flex; gap: 6px; align-items: center; padding: 4px 0; }
 .set-sec button.link { text-decoration: underline; }
 /* 帳號按鈕與帳號頁 */
-.acct-btn { border: 1px solid var(--ink); background: none; padding: 3px 12px; font-size: 14px; display: flex; gap: 6px; align-items: center; max-width: 150px; }
+.acct-btn { border: 1px solid var(--accent-line); background: none; padding: 3px 12px; font-size: 14px; display: flex; gap: 6px; align-items: center; max-width: 150px; }
 .acct-btn.in { border-color: var(--line); }
 .acct-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 99px; flex: none; background: var(--muted); }
@@ -365,3 +365,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .num { width: 64px; }
 .col { display: flex; flex-direction: column; gap: 6px; }
 .menu .row.pad input[type=datetime-local] { flex: 1; min-width: 0; }
+
+/* ---------- 主題色（設定 → 外觀）：--accent 按鈕／選取的底色、--on-accent 上面的字、--accent-line 強調邊線 ---------- */
+:root { --accent: var(--ink); --on-accent: var(--bg); --accent-line: var(--ink); }
+:root[data-accent="neon"] { --accent: #3dff5c; --on-accent: #0f2410; --accent-line: #1f9e37; --today: #1f9e37; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="neon"]:not([data-theme="light"]) { --accent-line: #3dff5c; --today: #5cf27a; }
+}
+:root[data-theme="dark"][data-accent="neon"] { --accent-line: #3dff5c; --today: #5cf27a; }
+:root[data-accent="neon"] .pagetabs { border-top-color: var(--accent-line); }
+:root[data-accent="neon"] .modal { border-top-color: var(--accent); }
+.accent-pick { display: flex; gap: 10px; }
+.accent-pick button { display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+.accent-pick button.on { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.swatch-lg { width: 18px; height: 18px; border-radius: 99px; border: 1px solid var(--line); }
