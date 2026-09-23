@@ -21,7 +21,8 @@ export function openSettings() {
     const cur = db.currentCal();
     body.replaceChildren(
       sec('提醒',
-        h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準')),
+        h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準'),
+        notifyRow()),
 
       sec('國定假日',
         h('div', { class: 'row wrap' },
@@ -105,6 +106,24 @@ function gcalHelp() {
         step(5, '解壓縮 .zip，裡面每個日曆各一個 ', h('b', {}, '.ics'), ' 檔'),
         step(6, '回到這裡選日期範圍和標籤，按「選擇 .ics 檔」（可一次選多個）')),
       h('div', { class: 'muted small' }, '只想匯入單一日曆：設定 → 左側點該日曆 →「匯出日曆」。重複匯入同一段時間不會產生重複任務。'))), { cls: 'page-modal' });
+}
+
+// 手機提醒的權限狀態（只在 Android App 裡顯示）
+function notifyRow() {
+  const box = h('div', { class: 'row wrap' });
+  if (!window.Capacitor?.isNativePlatform?.()) return box;
+  import('./notify.js').then(async n => {
+    const s = await n.status();
+    if (!s) return;
+    const okNotify = s.notify === 'granted', okExact = s.exact !== 'denied';
+    box.replaceChildren(
+      h('span', { class: okNotify ? '' : 'sync-error' }, okNotify ? '通知：已允許' : '通知：未允許'),
+      okNotify ? null : h('button', { onclick: async () => { await n.askPermission(); n.reschedule(); } }, '允許通知'),
+      h('span', { class: okExact ? '' : 'sync-error' }, okExact ? '準時提醒：已開啟' : '準時提醒：未開啟'),
+      okExact ? null : h('button', { onclick: () => n.openExactSetting() }, '開啟準時提醒'),
+      h('button', { onclick: async () => { await n.reschedule(); toast('提醒已重新排程'); } }, '重新排程'));
+  });
+  return box;
 }
 
 function exportFile() {

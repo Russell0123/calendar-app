@@ -1,0 +1,15 @@
+{
+  "appId": "io.github.russell0123.calendar",
+  "appName": "行事曆",
+  "webDir": "www",
+  "server": {
+    "url": "https://russell0123.github.io/calendar-app/",
+    "errorPath": "index.html"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_notify",
+      "iconColor": "#b0683a"
+    }
+  }
+}

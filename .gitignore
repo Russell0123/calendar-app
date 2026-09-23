@@ -5,3 +5,10 @@ android/app/build/
 *.log
 .claude/
 .mcp.json
+android/.gradle/
+android/build/
+android/app/release/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+*.keystore
+*.apk
