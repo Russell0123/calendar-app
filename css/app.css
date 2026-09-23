@@ -388,7 +388,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 :root[data-font="sans"] body { font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; }
 :root[data-accent="neon"] .pagetabs { border-top-color: var(--accent-line); }
 :root[data-accent="neon"] .modal { border-top-color: var(--accent); }
-.accent-pick { display: flex; gap: 10px; }
+.accent-pick { display: flex; flex-wrap: wrap; gap: 10px; }
 .accent-pick button { display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
 .accent-pick button.on { outline: 2px solid var(--accent-line); outline-offset: 1px; }
 .swatch-lg { width: 18px; height: 18px; border-radius: 99px; border: 1px solid var(--line); }

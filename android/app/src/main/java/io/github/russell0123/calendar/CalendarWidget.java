@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -88,8 +89,12 @@ public class CalendarWidget extends AppWidgetProvider {
         try { data = new JSONObject(p.getString(KEY_DATA, "{}")); } catch (Exception e) { data = new JSONObject(); }
         JSONObject days = data.optJSONObject("days");
         if (days == null) days = new JSONObject();
-        boolean dark = data.optBoolean("dark", false);
         boolean neon = data.optBoolean("neon", false);
+        // 深淺：light / dark / system（跟隨手機目前的深色模式）；舊版資料只有 dark
+        String mode = data.optString("mode", data.optBoolean("dark", false) ? "dark" : "light");
+        boolean dark = "system".equals(mode)
+            ? (ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            : "dark".equals(mode);
 
         // 跟 App 的主題一致
         int bg = dark ? 0xF21D1C1A : (neon ? 0xF2FFFFFF : 0xF2F1EDE4);
@@ -159,8 +164,10 @@ public class CalendarWidget extends AppWidgetProvider {
                         boolean done = e.optInt(3, 0) == 1;
                         if (done) title.setSpan(new StrikethroughSpan(), 0, title.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         ev.setTextViewText(R.id.ev, title);
-                        ev.setInt(R.id.ev, "setBackgroundColor", css(e.optString(1), line));
-                        int fg = css(e.optString(2), ink);
+                        // 每筆有淺色 [1][2] 與深色 [4][5] 兩組顏色
+                        int ci = dark && e.length() > 5 ? 4 : 1;
+                        ev.setInt(R.id.ev, "setBackgroundColor", css(e.optString(ci), line));
+                        int fg = css(e.optString(ci + 1), ink);
                         ev.setTextColor(R.id.ev, done ? (fg & 0x00FFFFFF) | 0x80000000 : fg);
                         cell.addView(R.id.cell_events, ev);
                     }

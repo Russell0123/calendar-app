@@ -54,9 +54,11 @@ const isNeon = () => document.documentElement.dataset.accent === 'neon';
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 // 深色模式：同色系的深底＋淺字，才不會在暗背景上太刺眼
 const toDark = ([bg, fg, label]) => [fg + '59', bg, label];
-export const colorOf = name => {
-  const c = isNeon() ? NEON_COLORS[name] || NEON_COLORS.gray : COLORS[name] || COLORS.gray;
-  return isDark() ? toDark(c) : c;
+// look：指定主題 { neon, dark }（桌面小工具可以跟 App 不同），沒給就用 App 目前的
+const nowLook = () => ({ neon: isNeon(), dark: isDark() });
+export const colorOf = (name, look = nowLook()) => {
+  const c = look.neon ? NEON_COLORS[name] || NEON_COLORS.gray : COLORS[name] || COLORS.gray;
+  return look.dark ? toDark(c) : c;
 };
 
 export function chip(tag, attrs = {}, ...extra) {
@@ -66,10 +68,10 @@ export function chip(tag, attrs = {}, ...extra) {
 
 // 任務顯示色：只有灰色標籤→灰；恰好一種其他顏色→該色；兩種以上→略深的灰
 const MIXED = ['#d5cfc3', '#2b2a27'], NEON_MIXED = ['#e4e8e4', '#1f231f'];
-export function taskColor(t) {
+export function taskColor(t, look = nowLook()) {
   const colors = [...new Set(db.taskTags(t).map(x => x.color).filter(c => c && c !== 'gray'))];
-  if (colors.length > 1) return isDark() ? ['#3a3833', '#e8e3d8'] : isNeon() ? NEON_MIXED : MIXED;
-  return colorOf(colors[0] || 'gray');
+  if (colors.length > 1) return look.dark ? ['#3a3833', '#e8e3d8'] : look.neon ? NEON_MIXED : MIXED;
+  return colorOf(colors[0] || 'gray', look);
 }
 
 // ---------- 彈窗 ----------
