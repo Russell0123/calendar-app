@@ -3,21 +3,28 @@ import * as db from './db.js';
 import { h, popover, ask } from './ui.js';
 import { openTask } from './editor.js';
 import { openSettings } from './settings.js';
+import { openCalendars } from './calendars.js';
+import { playIntro } from './hero.js';
 import { openAccount, syncLabel } from './account.js';
 import { renderSchedule } from './pages/schedule.js';
 import { renderHome } from './pages/home.js';
 import { renderCalendar } from './pages/calendar.js';
-import { renderFlow } from './pages/flow.js';
+import { renderFlow, showBoard } from './pages/flow.js';
 
 window.openTask = openTask;
 db.init();
 // 外觀：主題色（黑／螢光綠）、字體（明體／黑體）
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const applyAccent = () => {
-  document.documentElement.dataset.accent = db.meta().accent || 'ink';
-  document.documentElement.dataset.font = db.meta().font || 'serif';
+  const root = document.documentElement, m = db.meta();
+  root.dataset.accent = m.accent || 'ink';
+  root.dataset.font = m.font || 'serif';
+  const mode = m.mode || 'system';
+  root.dataset.theme = mode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : mode;
 };
 applyAccent();
 db.onChange(applyAccent);
+darkQuery.addEventListener('change', applyAccent);
 // 新版偵測：App 從背景回來時比對 version.json，有更新就重新載入（手機 App 常駐背景，不會自己重開）
 let loadedVersion = null;
 const fetchVersion = () => fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => j.v).catch(() => null);
@@ -75,7 +82,7 @@ function calMenu(anchor) {
       c.name, h('span', { class: 'spacer' }), c.id === cur ? '✓' : '')),
     h('div', { class: 'menu-sep' }),
     h('div', { class: 'menu-row', onclick: () => { p.close(); ask(anchor, '新行事曆名稱', '', name => db.newCalendar(name)); } }, '＋ 新行事曆'),
-    h('div', { class: 'menu-row', onclick: () => { p.close(); openSettings(); } }, '管理行事曆…')), { width: 240 });
+    h('div', { class: 'menu-row', onclick: () => { p.close(); openCalendars(); } }, '管理行事曆…')), { width: 240 });
 }
 
 // 自己做切頁動畫：瀏覽器的 smooth scroll 碰上 scroll-snap 常常停在半路
@@ -116,5 +123,10 @@ swiper.append(...panels);
 app.replaceChildren(header, swiper, tabs);
 db.onChange(draw);
 draw();
-requestAnimationFrame(() => goto(HOME, false));
+requestAnimationFrame(() => { goto(HOME, false); playIntro(app); });
+
+// 任務頁「流程」點下去：切到那張流程圖
+window.gotoBoard = id => { showBoard(id); draw(); goto(PAGES.findIndex(p => p[0] === 'flow')); };
+// 給手機返回鍵用：目前在哪一頁、回首頁
+window.appNav = { current: () => current, home: () => goto(HOME), HOME };
 addEventListener('resize', () => goto(current, false));

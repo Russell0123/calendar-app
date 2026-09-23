@@ -136,7 +136,7 @@ export function setMeta(patch) {
   if (Object.keys(patch).some(k => SYNCED_META.includes(k))) { state.meta.updated_at = now(); markDirty('meta', 'meta'); }
   emit();
 }
-const SYNCED_META = ['default_remind_time', 'accent', 'font'];
+const SYNCED_META = ['default_remind_time', 'accent', 'font', 'mode', 'confirm_delete'];
 export const calendars = () => all('calendars').sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 export const calId = () => (get('calendars', state.meta.current_calendar_id) || calendars()[0])?.id ?? null;
 export const currentCal = () => get('calendars', calId());
@@ -247,13 +247,13 @@ export function ensureTag(name, color = 'gray', cal = calId()) {
 export const everExisted = (table, id) => !!state[table][id];
 
 // 以 ext_id 對應：已匯入過的只更新標題／日期／時間，保留你改過的狀態、標籤、提醒、筆記
-export function importTasks(rows, tagId) {
-  const existing = new Map(tasks(t => t.ext_id).map(t => [t.ext_id, t]));
+export function importTasks(rows, tagId, cal = calId()) {
+  const existing = new Map(all('tasks', t => t.calendar_id === cal && t.ext_id).map(t => [t.ext_id, t]));
   let added = 0, updated = 0;
   rows.forEach(r => {
     const ex = existing.get(r.ext_id);
     if (ex) { rawPut('tasks', { id: ex.id, title: r.title, date: r.date, end_date: r.end_date, start_time: r.start_time, end_time: r.end_time }); updated++; }
-    else { rawPut('tasks', { ...r, status: 'todo', reminders: [], tag_ids: tagId ? [tagId] : [] }); added++; }
+    else { rawPut('tasks', { ...r, calendar_id: cal, status: 'todo', reminders: [], tag_ids: tagId ? [tagId] : [] }); added++; }
   });
   emit();
   return { added, updated };

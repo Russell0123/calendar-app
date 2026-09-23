@@ -4,6 +4,7 @@ import * as db from '../db.js';
 import { h, modal, chip, today, parseYmd, addDays, WEEK, confirmBox, toast, taskColor } from '../ui.js';
 import { tagPicker } from '../tags.js';
 import { PERIODS } from '../periods.js';
+import { selectButton } from '../pickers.js';
 import { occurrences } from '../repeat.js';
 
 let weekStart = null; // 週一
@@ -71,10 +72,13 @@ function editCourse(id, preset = {}) {
     h('span', { class: 'chip day' + (d.day === n ? ' on' : ''), onclick: () => { d.day = n; renderDays(); } }, WEEK[n])));
   renderDays();
 
-  const sel = key => h('select', { onchange: e => { d[key] = +e.target.value; if (d.end < d.start) { d.end = d.start; endSel.value = d.end; } } },
-    PERIODS.map(([l], i) => h('option', { value: i, selected: d[key] === i }, `第 ${l} 節`)));
-  const startSel = sel('start');
-  const endSel = sel('end');
+  // 節次：App 內建選單；開始晚於結束時自動把結束拉到同一節
+  const periodOpts = PERIODS.map(([l], i) => [i, `第 ${l} 節`]);
+  const periodBox = h('div', { class: 'row' });
+  const renderPeriods = () => periodBox.replaceChildren(
+    selectButton(periodOpts, d.start, v => { d.start = v; if (d.end < v) d.end = v; renderPeriods(); }, { width: 140 }), '到',
+    selectButton(periodOpts, d.end, v => { d.end = Math.max(v, d.start); renderPeriods(); }, { width: 140 }));
+  renderPeriods();
 
   // 科目標籤（單選）：沒選的話儲存時用課名自動建立；點 ⋯ 可改成簡稱
   const tagSel = d.tag_id && db.get('tags', d.tag_id) ? [d.tag_id] : [];
@@ -101,7 +105,7 @@ function editCourse(id, preset = {}) {
       h('div', { class: 'props' },
         prop('科目', tagV),
         prop('星期', dayBox),
-        prop('節次', h('div', { class: 'row' }, startSel, '到', endSel)),
+        prop('節次', periodBox),
         prop('教室', inp('room', '空白')),
         prop('老師', inp('teacher', '空白'))),
       h('textarea', { class: 'page-notes', placeholder: '筆記…', value: d.notes || '', oninput: e => (d.notes = e.target.value) }),

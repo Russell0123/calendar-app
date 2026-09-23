@@ -2,6 +2,8 @@
 import * as db from '../db.js';
 import { h, taskRow, empty, today, addDays, parseYmd, WEEK, fmtDate, modal } from '../ui.js';
 import { occurrences } from '../repeat.js';
+import { heroFrame } from '../hero.js';
+import { icon } from '../icons.js';
 
 export function renderHome(el) {
   const t = today();
@@ -32,7 +34,7 @@ export function renderHome(el) {
     pending.push(taskRow(x));
   });
 
-  // 快速輸入：Enter 直接變成今天的任務；「詳細」打開任務頁再補資料
+  // 快速輸入：Enter 或儲存鈕直接變成今天的任務
   const input = h('input', { id: 'quick', class: 'quick-input', placeholder: '記點什麼…', enterkeyhint: 'done',
     oninput: e => e.target.closest('.quick').classList.toggle('has', !!e.target.value) });
   const addToday = () => {
@@ -43,13 +45,11 @@ export function renderHome(el) {
 
   el.replaceChildren(h('div', { class: 'home' },
     h('div', { class: 'home-top' },
-      h('div', { class: 'home-art' }, h('img', { src: '20260729.png', alt: '' })),
+      heroFrame(),
       h('div', { class: 'home-head' },
       h('div', {}, h('div', { class: 'big-date' }, `${d.getMonth() + 1}月${d.getDate()}日`), h('div', { class: 'muted' }, `星期${WEEK[d.getDay()]}`)),
       h('form', { class: 'quick', onsubmit: e => { e.preventDefault(); addToday(); } }, input,
-        h('div', { class: 'quick-btns' },
-          h('button', { type: 'submit' }, '記下'),
-          h('button', { type: 'button', onclick: () => { const v = input.value.trim(); window.openTask(null, { title: v, date: t }); input.value = ''; } }, '詳細'))))),
+        h('button', { type: 'submit', class: 'quick-save', title: '儲存', 'aria-label': '儲存' }, icon('save'))))),
     h('div', { class: 'home-grid' },
       h('section', { class: 'block today-block' }, h('h3', {}, '今天'), todayList),
       h('div', { class: 'home-side' },

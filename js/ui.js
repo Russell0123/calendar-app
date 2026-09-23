@@ -1,5 +1,6 @@
 // 共用 UI 工具
 import * as db from './db.js';
+import { icon } from './icons.js';
 
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
@@ -50,7 +51,13 @@ const NEON_COLORS = {
   purple: ['#f0e3ff', '#6d2fc4'], pink: ['#ffe1f1', '#c4186d'], red: ['#ffe1dd', '#d1321d'],
 };
 const isNeon = () => document.documentElement.dataset.accent === 'neon';
-export const colorOf = name => (isNeon() ? NEON_COLORS[name] || NEON_COLORS.gray : COLORS[name] || COLORS.gray);
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+// 深色模式：同色系的深底＋淺字，才不會在暗背景上太刺眼
+const toDark = ([bg, fg, label]) => [fg + '59', bg, label];
+export const colorOf = name => {
+  const c = isNeon() ? NEON_COLORS[name] || NEON_COLORS.gray : COLORS[name] || COLORS.gray;
+  return isDark() ? toDark(c) : c;
+};
 
 export function chip(tag, attrs = {}, ...extra) {
   const [bg, fg] = colorOf(tag.color);
@@ -61,7 +68,7 @@ export function chip(tag, attrs = {}, ...extra) {
 const MIXED = ['#d5cfc3', '#2b2a27'], NEON_MIXED = ['#e4e8e4', '#1f231f'];
 export function taskColor(t) {
   const colors = [...new Set(db.taskTags(t).map(x => x.color).filter(c => c && c !== 'gray'))];
-  if (colors.length > 1) return isNeon() ? NEON_MIXED : MIXED;
+  if (colors.length > 1) return isDark() ? ['#3a3833', '#e8e3d8'] : isNeon() ? NEON_MIXED : MIXED;
   return colorOf(colors[0] || 'gray');
 }
 
@@ -103,6 +110,12 @@ export function confirmBox(message, onYes, yesLabel = '刪除') {
       h('button', { class: 'primary', onclick: () => { close(); onYes(); } }, yesLabel))), { cls: 'confirm-modal' });
 }
 
+// 刪除任務用的確認：設定「刪除前確認」關掉時直接刪
+export function confirmDelete(message, onYes) {
+  if (db.meta().confirm_delete === false) onYes();
+  else confirmBox(message, onYes);
+}
+
 export function toast(msg) {
   const t = h('div', { class: 'toast' }, msg);
   document.body.append(t);
@@ -110,9 +123,11 @@ export function toast(msg) {
 }
 
 // ---------- 浮動選單（貼著觸發元素） ----------
-export function popover(anchor, content, { onClose, width = 300 } = {}) {
-  document.querySelectorAll('.pop').forEach(p => p._close?.());
-  const pop = h('div', { class: 'pop', style: { width: `min(${width}px, calc(100vw - 16px))` } }, content);
+let popZ = 0;
+// stack：疊在現有選單上面（例如日期選單裡再開小月曆），不關掉原本的
+export function popover(anchor, content, { onClose, width = 300, stack = false } = {}) {
+  if (!stack) document.querySelectorAll('.pop').forEach(p => p._close?.());
+  const pop = h('div', { class: 'pop', 'data-z': ++popZ, style: { width: `min(${width}px, calc(100vw - 16px))`, zIndex: 30 + popZ } }, content);
   document.body.append(pop);
   const place = () => {
     const r = anchor.getBoundingClientRect();
@@ -123,7 +138,13 @@ export function popover(anchor, content, { onClose, width = 300 } = {}) {
     pop.style.left = Math.max(8, left) + 'px'; pop.style.top = top + 'px';
   };
   place();
-  const outside = e => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
+  // 點在自己、觸發按鈕、或疊在上面的子選單裡都不算「外面」
+  const outside = e => {
+    if (pop.contains(e.target) || anchor.contains(e.target)) return;
+    const other = e.target.closest?.('.pop');
+    if (other && +other.dataset.z > +pop.dataset.z) return;
+    close();
+  };
   const esc = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
   setTimeout(() => document.addEventListener('pointerdown', outside, true));
   document.addEventListener('keydown', esc, true);
@@ -144,8 +165,16 @@ export function taskRow(t, { showDate = true } = {}) {
     h('div', { class: 'task-main', onclick: () => window.openTask(t.id, {}, { occ: t._occ }) },
       h('div', { class: 'task-title' }, t.title || '（未命名）', t.repeat?.freq ? h('span', { class: 'rep', title: '重複' }, '↻') : null, t.priority ? h('span', { class: 'stars' }, '★'.repeat(t.priority)) : null),
       (showDate && t.date) || t.tag_ids?.length ? h('div', { class: 'task-meta' },
-        showDate && t.date ? h('span', { class: 'when' }, fmtWhen(t)) : null, db.taskTags(t).map(o => chip(o))) : null));
+        showDate && t.date ? h('span', { class: 'when' }, fmtWhen(t)) : null, db.taskTags(t).map(o => chip(o))) : null),
+    t.status === 'done' ? h('button', { class: 'del-done', title: '刪除', 'aria-label': '刪除', onclick: e => {
+      e.stopPropagation();
+      // 重複任務的某一次：只刪那一次
+      if (t._occ) confirmDelete(`刪除「${t.title}」的這一次？`, () => db.skipOccurrence(t.id, t._occ));
+      else confirmDelete(`刪除「${t.title}」？`, () => db.remove('tasks', t.id));
+    } }, icon('noentry')) : null);
 }
+
+export const canAutofocus = () => matchMedia('(pointer: fine)').matches;
 
 export const empty = text => h('div', { class: 'empty' }, text);
 
@@ -153,5 +182,5 @@ export const empty = text => h('div', { class: 'empty' }, text);
 export function ask(anchor, placeholder, value, onOk) {
   const input = h('input', { value: value || '', placeholder, onkeydown: e => { if (e.key === 'Enter' && input.value.trim()) { p.close(); onOk(input.value.trim()); } } });
   const p = popover(anchor, h('div', { class: 'ask' }, input, h('button', { class: 'primary', onclick: () => { if (input.value.trim()) { p.close(); onOk(input.value.trim()); } } }, '確定')), { width: 280 });
-  setTimeout(() => { input.focus(); input.select(); }, 30);
+  if (canAutofocus()) setTimeout(() => { input.focus(); input.select(); }, 30);
 }

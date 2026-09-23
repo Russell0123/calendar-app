@@ -1,5 +1,5 @@
 // 帳號頁（右上角按鈕）：沒登入→登入／註冊；登入後→同步狀態、立即同步、登出
-import { h, modal, confirmBox, toast } from './ui.js';
+import { h, modal, confirmBox, toast, canAutofocus } from './ui.js';
 
 export const syncLabel = s => ({ syncing: '同步中…', ok: '已同步' + (s.last ? ' ' + s.last.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''), error: '同步失敗', off: '未登入' })[s.state] ?? '';
 
@@ -48,7 +48,7 @@ export async function openAccount() {
         h('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; render(); } }, l))),
       email, pw, pw2,
       h('button', { class: 'primary', onclick: submit }, mode === 'in' ? '登入' : '註冊'));
-    setTimeout(() => email.focus(), 30);
+    if (canAutofocus()) setTimeout(() => email.focus(), 30);
   };
   sync.onStatus(render);
   render();

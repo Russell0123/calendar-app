@@ -1,6 +1,6 @@
 // 標籤選擇器（仿 Notion）：搜尋、建立、點 ⋯ 改名／分組／顏色／刪除
 import * as db from './db.js';
-import { h, chip, popover, COLORS } from './ui.js';
+import { h, chip, popover, COLORS, canAutofocus } from './ui.js';
 
 export function tagPicker(anchor, selected, onChange, onClose) {
   const root = h('div', { class: 'tagpick' });
@@ -18,10 +18,11 @@ export function tagPicker(anchor, selected, onChange, onClose) {
   const list = h('div', { class: 'tp-list' });
 
   const changed = () => { onChange?.(selected); renderTop(); renderList(); p.place(); };
-  const toggle = id => { const i = selected.indexOf(id); i >= 0 ? selected.splice(i, 1) : selected.push(id); q = ''; input.value = ''; changed(); input.focus(); };
+  const keepTyping = () => { if (document.activeElement === input) input.focus(); };
+  const toggle = id => { const typing = document.activeElement === input; const i = selected.indexOf(id); i >= 0 ? selected.splice(i, 1) : selected.push(id); q = ''; input.value = ''; changed(); if (typing) input.focus(); };
   const create = name => {
     selected.push(db.put('tags', { name, color: 'gray', group: null, order: db.tags().length }).id);
-    q = ''; input.value = ''; changed(); input.focus();
+    q = ''; input.value = ''; changed(); keepTyping();
   };
 
   function renderTop() {
@@ -118,7 +119,7 @@ export function tagPicker(anchor, selected, onChange, onClose) {
     p.place();
   }
 
-  function main() { root.replaceChildren(top, list); renderTop(); renderList(); p.place(); setTimeout(() => input.focus(), 20); }
+  function main() { root.replaceChildren(top, list); renderTop(); renderList(); p.place(); if (canAutofocus()) setTimeout(() => input.focus(), 20); }
   main();
   return p;
 }

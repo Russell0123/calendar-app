@@ -2,7 +2,7 @@
 // 操作：拖曳節點移動｜從右側圓點拖到另一任務＝連線｜點節點選取（再點一次＝編輯）｜點連線選取
 //      拖曳空白＝平移｜Ctrl+滾輪 或 右下按鈕＝縮放｜雙擊空白＝在該處新增任務｜Delete＝刪除選取
 import * as db from '../db.js';
-import { h, chip, fmtWhen, taskColor, empty, ask, popover, confirmBox } from '../ui.js';
+import { h, chip, fmtWhen, taskColor, empty, ask, popover, confirmBox, confirmDelete, canAutofocus } from '../ui.js';
 
 let boardId = null;
 let view = { x: 40, y: 60, k: 1 };
@@ -10,6 +10,8 @@ let sel = null;      // { type: 'node' | 'edge', id }
 let linking = null;  // 「連線到…」模式的來源任務 id
 const SVGNS = 'http://www.w3.org/2000/svg';
 const OFF = 5000;    // SVG 偏移，節點拖到負座標也畫得到線
+
+export const showBoard = id => { boardId = id; };
 
 export function renderFlow(el) {
   const boards = db.mine('boards').sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -28,7 +30,7 @@ export function renderFlow(el) {
         h('div', { class: 'menu-row', onclick: () => { p.close(); addExisting(btn, b, el); } }, '加入既有任務')), { width: 160 });
     } }, '＋ 任務') : null);
 
-  if (!b) return el.replaceChildren(bar, empty('還沒有流程圖。點左上「流程圖 ▾」→ 新流程。'));
+  if (!b) return el.replaceChildren(bar, h('div', { class: 'flow-empty' }, '還沒有流程圖。點「流程圖 ▾」→ 新流程。'));
 
   const nodes = b.nodes.filter(n => db.get('tasks', n.task_id)).map(n => ({ ...n }));
   const onBoard = new Set(nodes.map(n => n.task_id));
@@ -46,8 +48,8 @@ export function renderFlow(el) {
   const tip = h('div', { class: 'flow-tip' });
   const canvas = h('div', { class: 'flow', tabindex: '0' }, layer, tip,
     h('div', { class: 'flow-zoom' },
-      h('button', { onclick: () => zoomAt(1.2) }, '＋'),
       h('button', { onclick: () => zoomAt(1 / 1.2) }, '－'),
+      h('button', { onclick: () => zoomAt(1.2) }, '＋'),
       h('button', { onclick: () => fit() }, '全部')));
 
   const nodeEls = {};
@@ -122,7 +124,7 @@ export function renderFlow(el) {
         h('button', { onclick: () => window.openTask(t.id) }, '編輯'),
         h('button', { onclick: () => { linking = t.id; sel = null; updateSel(); } }, '連線到…'),
         h('button', { onclick: () => removeNode(t.id) }, '移出流程'),
-        h('button', { class: 'danger', onclick: () => confirmBox(`刪除任務「${t.title}」？行事曆上也會一起刪除。`, () => { sel = null; db.remove('tasks', t.id); }) }, '刪除任務'));
+        h('button', { class: 'danger', onclick: () => confirmDelete(`刪除任務「${t.title}」？行事曆上也會一起刪除。`, () => { sel = null; db.remove('tasks', t.id); }) }, '刪除任務'));
     } else if (sel?.type === 'edge') {
       const l = links.find(x => x.id === sel.id);
       tip.replaceChildren(h('span', {}, `${db.get('tasks', l.from)?.title} → ${db.get('tasks', l.to)?.title}`),
@@ -273,7 +275,7 @@ function addExisting(anchor, b, el) {
   };
   render();
   const p = popover(anchor, h('div', {}, input, list), { width: 320 });
-  setTimeout(() => input.focus(), 30);
+  if (canAutofocus()) setTimeout(() => input.focus(), 30);
 }
 
 // 流程下拉選單：切換、新增、改名、刪除

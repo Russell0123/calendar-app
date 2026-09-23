@@ -2,6 +2,7 @@
 import * as db from '../db.js';
 import { h, today, ymd, taskRow, empty, fmtDate, fmtWhen, taskColor, WEEK, chip, popover, ask, confirmBox } from '../ui.js';
 import { tagPicker } from '../tags.js';
+import { selectButton } from '../pickers.js';
 import { occurrences } from '../repeat.js';
 
 let mode = 'month';
@@ -105,7 +106,8 @@ function boardView(el, bar, root) {
       viewId = db.put('views', { name, group: null, filter: { tag_ids: [], range: 'all', status: 'all' }, order: views.length }).id;
     }) }, '＋')));
 
-  const sel = (value, opts, onchange) => h('select', { onchange: e => onchange(e.target.value) }, opts.map(([k, l]) => h('option', { value: k, selected: k === value }, l)));
+  // App 內建選單（不用手機系統的下拉選單）
+  const sel = (value, opts, onchange) => selectButton(opts, value, onchange, { width: 200 });
   const filterTags = h('div', { class: 'pv chips' });
   const selTags = [...f.tag_ids];
   const renderFT = () => filterTags.replaceChildren(...(selTags.length ? selTags.map(i => db.get('tags', i)).filter(Boolean).map(x => chip(x)) : [h('span', { class: 'blank' }, '篩選標籤')]));
