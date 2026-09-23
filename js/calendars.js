@@ -51,7 +51,8 @@ function openCalendar(id, refreshList) {
       sec('清除資料',
         h('div', { class: 'row wrap' },
           h('button', { onclick: () => confirmBox('刪除這個行事曆的所有任務（含連線）？標籤與課表會保留。', () => { db.clearCalendar(id, 'tasks'); toast('已刪除所有任務'); }) }, '刪除所有任務'),
-          h('button', { class: 'danger', onclick: () => confirmBox('清空這個行事曆的所有資料（任務、標籤、課表、流程、視圖）？', () => { db.clearCalendar(id); toast('已清空'); }, '清空') }, '清空全部資料'))),
+          h('button', { class: 'danger', onclick: () => confirmBox('清空這個行事曆的所有資料（任務、標籤、課表、流程、視圖）？', () => { db.clearCalendar(id); toast('已清空'); }, '清空') }, '清空全部資料'),
+          h('button', { class: 'danger', onclick: () => confirmBox('把這個行事曆的內容換成示範資料？（國定假日保留，其他行事曆不受影響）', () => { db.demoInto(id); toast('已還原示範資料'); }, '還原') }, '還原示範資料'))),
 
       gcalSection(sec, id),
 
@@ -69,8 +70,7 @@ function openCalendar(id, refreshList) {
         h('div', { class: 'row wrap' },
           // 手機 App 裡沒辦法下載檔案，按鈕變灰
           h('button', { disabled: isApp() || null, title: isApp() ? '請用電腦版匯出' : null, onclick: exportFile }, '匯出備份'),
-          h('button', { onclick: () => file.click() }, '匯入備份'), file,
-          h('button', { class: 'danger', onclick: () => confirmBox('清除所有行事曆並還原示範資料？', () => { db.resetDemo(); close(); }, '還原') }, '還原示範資料'))));
+          h('button', { onclick: () => file.click() }, '匯入備份'), file)));
   }
   render();
 }

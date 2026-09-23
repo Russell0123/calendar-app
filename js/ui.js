@@ -132,12 +132,16 @@ export function popover(anchor, content, { onClose, width = 300, stack = false }
   const place = () => {
     const r = anchor.getBoundingClientRect();
     const w = pop.offsetWidth, ht = pop.offsetHeight;
+    // 手機鍵盤跳出時可見高度會變小：一律放在鍵盤上方
+    const vv = window.visualViewport, vh = vv ? vv.height + vv.offsetTop : innerHeight;
     let left = Math.min(r.left, innerWidth - w - 8);
     let top = r.bottom + 4;
-    if (top + ht > innerHeight - 8) top = Math.max(8, r.top - ht - 4);
+    if (top + ht > vh - 8) top = r.top - ht - 4;
+    top = Math.max(8, Math.min(top, vh - ht - 8));
     pop.style.left = Math.max(8, left) + 'px'; pop.style.top = top + 'px';
   };
   place();
+  window.visualViewport?.addEventListener('resize', place);
   // 點在自己、觸發按鈕、或疊在上面的子選單裡都不算「外面」
   const outside = e => {
     if (pop.contains(e.target) || anchor.contains(e.target)) return;
@@ -152,6 +156,7 @@ export function popover(anchor, content, { onClose, width = 300, stack = false }
     if (!pop.isConnected) return;
     document.removeEventListener('pointerdown', outside, true);
     document.removeEventListener('keydown', esc, true);
+    window.visualViewport?.removeEventListener('resize', place);
     pop.remove(); onClose?.();
   }
   pop._close = close; pop._place = place;

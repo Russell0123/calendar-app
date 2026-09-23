@@ -176,6 +176,22 @@ export function clearCalendar(id, only) {
   emit();
 }
 
+// 把示範資料覆寫進指定的行事曆：清掉這個行事曆原本的內容（國定假日保留），其他行事曆不動
+export function demoInto(id) {
+  const holidayTag = all('tags', t => t.calendar_id === id && t.name === '國定假日')[0];
+  const keep = (t, r) => (t === 'tasks' && r.ext_id?.startsWith('holiday')) || (t === 'tags' && r.id === holidayTag?.id);
+  SCOPED.forEach(t => all(t, r => r.calendar_id === id && !keep(t, r)).forEach(r => softDelete(t, r.id)));
+  const cur = state.meta.current_calendar_id;
+  SEED(state, { put: (table, row) => {
+    if (table === 'calendars') return get('calendars', id);          // 不另建行事曆，名稱照舊
+    if (table === 'tags' && row.name === '國定假日' && holidayTag) return holidayTag;
+    return rawPut(table, { ...row, calendar_id: id });
+  } });
+  state.meta.current_calendar_id = cur;
+  linkCourses(id, false);
+  emit();
+}
+
 export function deleteCalendar(id) {
   SCOPED.forEach(t => all(t, r => r.calendar_id === id).forEach(r => softDelete(t, r.id)));
   softDelete('calendars', id);
