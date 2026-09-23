@@ -4,7 +4,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as db from './db.js';
 import { h, modal } from './ui.js';
 
-const SUPABASE_URL = 'https://qpwkbduxgpabtitpzqui.supabase.co';
+export const SUPABASE_URL = 'https://qpwkbduxgpabtitpzqui.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_3T7E6zsILt206GQtB1BRQw_OdAGFH5u'; // 公開金鑰，安全靠資料表權限規則
 const PAGE = 1000;
 const OVERLAP = 60e3; // 下載時往前多抓 1 分鐘，避免同時寫入時漏資料（重複套用無害）

@@ -1,0 +1,6 @@
+# Supabase CLI 設定（只用來部署雲端函式）
+project_id = "qpwkbduxgpabtitpzqui"
+
+# AI 連接器用個人金鑰驗證，不走 Supabase 登入的 JWT
+[functions.calendar-mcp]
+verify_jwt = false

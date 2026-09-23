@@ -320,6 +320,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .acct-email { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
 .acct-state.sync-error { color: var(--danger); }
 .acct-state.sync-ok, .acct-state.sync-syncing { color: var(--muted); }
+.ai-box { border-top: 2px solid var(--rule); padding-top: 10px; margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+.ai-box h3 { margin: 0; font-size: 15px; }
+.key-row { display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 4px 0; }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+.confirm input.mono { width: 100%; }
 .help ol { padding-left: 22px; line-height: 2; margin: 4px 0 12px; }
 
 /* ---------- 手機 ---------- */
