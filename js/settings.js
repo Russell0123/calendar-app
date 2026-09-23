@@ -4,7 +4,6 @@ import { h, modal, toast } from './ui.js';
 import { timeButton } from './pickers.js';
 
 export const APP_VERSION = 'v1.0.0';
-const isNative = !!window.Capacitor?.isNativePlatform?.();
 
 export function openSettings() {
   const body = h('div', { class: 'page-body settings' });
@@ -32,12 +31,6 @@ export function openSettings() {
           pick('主題色', 'accent', 'ink', [['ink', '黑', swatch('#2b2a27')], ['neon', '螢光綠', swatch('#3dff5c')]]),
           pick('字體', 'font', 'serif', [['serif', '明體', h('span', { class: 'font-demo serif' }, '字')], ['sans', '黑體', h('span', { class: 'font-demo sans' }, '字')]]),
           pick('深淺', 'mode', 'system', [['light', '淺色', swatch('#f1ede4')], ['dark', '深色', swatch('#1d1c1a')], ['system', '跟隨系統', swatch('linear-gradient(90deg,#f1ede4 50%,#1d1c1a 50%)')]]))),
-
-      // 桌面小工具可以跟 App 用不同的外觀（只在 Android App 裡顯示）
-      isNative ? sec('桌面小工具',
-        h('div', { class: 'look' },
-          pick('主題色', 'widget_accent', 'app', [['app', '跟 App 一樣', swatch('linear-gradient(90deg,#2b2a27 50%,#3dff5c 50%)')], ['ink', '黑', swatch('#2b2a27')], ['neon', '螢光綠', swatch('#3dff5c')]]),
-          pick('深淺', 'widget_mode', 'app', [['app', '跟 App 一樣', swatch('linear-gradient(90deg,#f1ede4 50%,#1d1c1a 50%)')], ['light', '淺色', swatch('#f1ede4')], ['dark', '深色', swatch('#1d1c1a')], ['system', '跟隨系統', swatch('linear-gradient(90deg,#f1ede4 50%,#1d1c1a 50%)')]]))) : null,
 
       sec('刪除',
         h('label', { class: 'check' },

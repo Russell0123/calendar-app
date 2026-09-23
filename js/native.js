@@ -30,10 +30,10 @@ function sendWidget() {
   const now = new Date();
   const from = ymd(new Date(now.getFullYear(), now.getMonth() - 3, 1));
   const to = ymd(new Date(now.getFullYear(), now.getMonth() + 5, 0));
-  // 小工具外觀：設定裡可以另外選，沒選就跟 App 一樣
+  // 小工具外觀跟 App 一樣
   const m = db.meta();
-  const neon = (m.widget_accent && m.widget_accent !== 'app' ? m.widget_accent : m.accent || 'ink') === 'neon';
-  const mode = m.widget_mode && m.widget_mode !== 'app' ? m.widget_mode : m.mode || 'system'; // light | dark | system
+  const neon = m.accent === 'neon';
+  const mode = m.mode || 'system'; // light | dark | system
   const days = {};
   for (const x of occurrences(db.tasks(), from, to).sort(db.sortByDate)) {
     // 淺色、深色兩組顏色都給：「跟隨系統」時由小工具依手機目前的深淺挑
