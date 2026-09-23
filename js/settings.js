@@ -21,11 +21,9 @@ export function openSettings() {
     const cur = db.currentCal();
     body.replaceChildren(
       sec('提醒',
-        h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準'),
-        h('div', { class: 'muted small' }, '實際跳通知要等打包成 App 後才會啟用。')),
+        h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準')),
 
       sec('行事曆',
-        h('div', { class: 'muted small' }, '每個行事曆的任務、標籤、課表、流程都各自獨立。'),
         cals.map(c => h('div', { class: 'set-row' + (c.id === cur?.id ? ' cur' : '') },
           h('input', { type: 'radio', name: 'cal', checked: c.id === cur?.id, onchange: () => { db.setMeta({ current_calendar_id: c.id }); render(); } }),
           h('input', { class: 'grow', value: c.name, onchange: e => e.target.value.trim() && db.put('calendars', { id: c.id, name: e.target.value.trim() }) }),
@@ -41,7 +39,6 @@ export function openSettings() {
       gcalSection(sec),
 
       sec('備份',
-        h('div', { class: 'muted small' }, '目前資料只存在這個瀏覽器，換裝置前先匯出。'),
         h('div', { class: 'row wrap' },
           h('button', { onclick: exportFile }, '匯出備份'),
           h('button', { onclick: () => file.click() }, '匯入備份'),

@@ -137,7 +137,37 @@ export function renderFlow(el) {
   // ---------- 指標操作 ----------
   const targetNode = ev => document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.node')?.dataset.id;
 
+  // ---------- 兩指縮放 ----------
+  const pts = new Map();
+  let pinch = null, gesture = null;
+  const two = () => [...pts.values()].slice(0, 2);
+  const dist = () => { const [a, c] = two(); return Math.hypot(a.x - c.x, a.y - c.y) || 1; };
+  const mid = () => { const [a, c] = two(); return { x: (a.x + c.x) / 2, y: (a.y + c.y) / 2 }; };
   canvas.addEventListener('pointerdown', e => {
+    if (e.target.closest('button, .flow-tip, .flow-zoom')) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {
+      if (gesture) gesture.cancelled = true;
+      const r = canvas.getBoundingClientRect(), c = mid();
+      pinch = { d0: dist(), k0: view.k, w: { x: (c.x - r.left - view.x) / view.k, y: (c.y - r.top - view.y) / view.k } };
+    }
+  }, true);
+  canvas.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!pinch || pts.size < 2) return;
+    const r = canvas.getBoundingClientRect(), c = mid();
+    const k = Math.min(2.5, Math.max(0.3, pinch.k0 * dist() / pinch.d0));
+    // 兩指中心底下的那一點保持不動（同時可平移）
+    view = { k, x: c.x - r.left - pinch.w.x * k, y: c.y - r.top - pinch.w.y * k };
+    applyView();
+  });
+  const lift = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; };
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
+
+  canvas.addEventListener('pointerdown', e => {
+    if (pts.size > 1) return; // 已經是兩指縮放
     if (e.button !== 0 || e.target.closest('button, select, .flow-tip, .flow-zoom')) return;
     e.preventDefault();
     canvas.focus({ preventScroll: true });
@@ -173,9 +203,13 @@ export function renderFlow(el) {
       onUp = () => { canvas.classList.remove('panning'); if (!moved && (sel || linking)) { sel = null; linking = null; updateSel(); } };
     }
 
-    const move = ev => { if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 4) return; moved = true; onMove?.(ev); };
+    const g = gesture = { cancelled: false }; // 第二根手指落下時會被取消，改成兩指縮放
+    const move = ev => { if (g.cancelled || ev.pointerId !== e.pointerId) return; if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 4) return; moved = true; onMove?.(ev); };
     const up = ev => {
+      if (ev.pointerId !== e.pointerId) return;
       canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up);
+      canvas.classList.remove('panning');
+      if (g.cancelled) return drawEdges();
       onUp?.(ev);
     };
     canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);

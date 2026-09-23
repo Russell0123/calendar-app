@@ -20,9 +20,7 @@ export function tagPicker(anchor, selected, onChange, onClose) {
   const changed = () => { onChange?.(selected); renderTop(); renderList(); p.place(); };
   const toggle = id => { const i = selected.indexOf(id); i >= 0 ? selected.splice(i, 1) : selected.push(id); q = ''; input.value = ''; changed(); input.focus(); };
   const create = name => {
-    const colors = Object.keys(COLORS);
-    const n = db.tags().length;
-    selected.push(db.put('tags', { name, color: colors[n % colors.length], group: null, order: n }).id);
+    selected.push(db.put('tags', { name, color: 'gray', group: null, order: db.tags().length }).id);
     q = ''; input.value = ''; changed(); input.focus();
   };
 

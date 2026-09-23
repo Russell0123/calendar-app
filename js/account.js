@@ -30,8 +30,10 @@ export async function openAccount() {
     const email = h('input', { type: 'email', placeholder: 'email', autocomplete: 'username' });
     const pw = h('input', { type: 'password', placeholder: '密碼（至少 6 碼）', autocomplete: mode === 'in' ? 'current-password' : 'new-password',
       onkeydown: e => { if (e.key === 'Enter') submit(); } });
+    const pw2 = mode === 'up' ? h('input', { type: 'password', placeholder: '再輸入一次密碼', autocomplete: 'new-password', onkeydown: e => { if (e.key === 'Enter') submit(); } }) : null;
     const submit = async () => {
       if (!email.value.trim() || pw.value.length < 6) return toast('請填 email 和至少 6 碼密碼');
+      if (pw2 && pw2.value !== pw.value) return toast('兩次密碼不一樣');
       try {
         if (mode === 'in') await sync.signIn(email.value.trim(), pw.value);
         else if (!await sync.signUp(email.value.trim(), pw.value)) return toast('請到信箱點確認信，再回來登入');
@@ -41,7 +43,7 @@ export async function openAccount() {
     body.replaceChildren(
       h('div', { class: 'seg acct-seg' }, [['in', '登入'], ['up', '註冊']].map(([k, l]) =>
         h('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; render(); } }, l))),
-      email, pw,
+      email, pw, pw2,
       h('button', { class: 'primary', onclick: submit }, mode === 'in' ? '登入' : '註冊'));
     setTimeout(() => email.focus(), 30);
   };

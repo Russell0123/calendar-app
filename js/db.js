@@ -41,6 +41,14 @@ export function init() {
       }
       // 一次性：課程連上科目標籤，並移除舊的科目標籤
       if (!state.meta.course_tags_v1) { calendars().forEach(c => linkCourses(c.id, true)); state.meta.course_tags_v1 = true; persist(); }
+      // 一次性：首頁不再有隨手記，舊的隨手記轉成當天的任務
+      if (!state.meta.notes_to_tasks_v1) {
+        all('notes').forEach(n => {
+          rawPut('tasks', { calendar_id: n.calendar_id, title: n.text, notes: '', date: n.date, end_date: null, start_time: null, end_time: null, status: n.done ? 'done' : 'todo', priority: 0, tag_ids: [], reminders: [] });
+          softDelete('notes', n.id);
+        });
+        state.meta.notes_to_tasks_v1 = true; persist();
+      }
       return;
     }
   } catch (e) { console.error(e); }
@@ -69,9 +77,7 @@ const OLD_SUBJECTS = ['材力', '工數', '物化', '有機', '有機實', '普�
 export function ensureSubjectTag(name, cal = calId()) {
   const ex = all('tags', t => t.calendar_id === cal && t.group === SUBJECT && t.name === name)[0];
   if (ex) return ex.id;
-  const colors = ['green', 'blue', 'pink', 'orange', 'purple', 'brown', 'yellow', 'red'];
-  const k = all('tags', t => t.calendar_id === cal && t.group === SUBJECT).length;
-  return rawPut('tags', { calendar_id: cal, name, group: SUBJECT, color: colors[k % colors.length], order: all('tags', t => t.calendar_id === cal).length }).id;
+  return rawPut('tags', { calendar_id: cal, name, group: SUBJECT, color: 'gray', order: all('tags', t => t.calendar_id === cal).length }).id;
 }
 
 function linkCourses(cal, dropOld) {

@@ -1,24 +1,21 @@
 // 首頁：像助理的白板。今天的行程、任務、隨手記排在一起
 import * as db from '../db.js';
 import { h, taskRow, empty, today, addDays, parseYmd, WEEK, fmtDate, modal } from '../ui.js';
-import { PERIODS } from '../periods.js';
-import { courseTasks } from './schedule.js';
 
 export function renderHome(el) {
   const t = today();
   const d = parseYmd(t);
 
-  const courses = db.mine('courses', c => c.day === d.getDay());
-  const todayTasks = db.tasks(x => db.onDay(x, t));
-  const notes = db.mine('notes', n => n.date === t || !n.done);
-
-  // 今天：課程和有時間的任務依時間排，沒時間的任務接著，隨手記最後
-  const timed = [
-    ...courses.map(c => ({ time: PERIODS[c.start][1], el: courseRow(c) })),
-    ...todayTasks.filter(x => x.start_time).map(x => ({ time: x.start_time, el: withTime(x.start_time, taskRow(x, { showDate: false })) })),
-  ].sort((a, b) => a.time.localeCompare(b.time)).map(x => x.el);
-  const untimed = todayTasks.filter(x => !x.start_time).map(x => taskRow(x, { showDate: false }));
-  const noteRows = notes.sort((a, b) => (a.done - b.done) || a.created_at.localeCompare(b.created_at)).map(noteRow);
+  // 今天：只放任務。長按拖曳排過的依 day_order，其餘依時間、建立順序
+  const todayTasks = db.tasks(x => db.onDay(x, t)).sort((a, b) =>
+    (a.day_order ?? 1e9) - (b.day_order ?? 1e9) || (a.start_time || '99').localeCompare(b.start_time || '99') || a.created_at.localeCompare(b.created_at));
+  const todayList = h('div', { class: 'today-list' }, todayTasks.map(x => {
+    const row = taskRow(x, { showDate: false });
+    if (x.start_time) row.querySelector('.task-main').prepend(h('span', { class: 'time inline' }, x.start_time));
+    row.dataset.sort = x.id;
+    return row;
+  }));
+  sortable(todayList, ids => db.putMany('tasks', ids.map((id, i) => ({ id, day_order: i }))));
 
   const upcoming = db.tasks(x => x.date && x.date > t && x.date <= addDays(t, 7)).sort(db.sortByDate);
   const byDay = {};
@@ -34,10 +31,15 @@ export function renderHome(el) {
     pending.push(taskRow(x));
   });
 
+  // 快速輸入：Enter 直接變成今天的任務；「詳細」打開任務頁再補資料
   const input = h('input', { id: 'quick', class: 'quick-input', placeholder: '記點什麼…',
     oninput: e => e.target.parentNode.classList.toggle('has', !!e.target.value),
-    onkeydown: e => { if (e.key === 'Enter') addNote(); } });
-  const addNote = () => { const v = input.value.trim(); if (!v) return; db.put('notes', { date: t, text: v, done: false }); document.getElementById('quick')?.focus(); };
+    onkeydown: e => { if (e.key === 'Enter') addToday(); } });
+  const addToday = () => {
+    const v = input.value.trim(); if (!v) return;
+    db.put('tasks', { title: v, notes: '', date: t, end_date: null, start_time: null, end_time: null, status: 'todo', priority: 0, tag_ids: [], reminders: [] });
+    document.getElementById('quick')?.focus();
+  };
 
   el.replaceChildren(h('div', { class: 'home' },
     h('div', { class: 'home-top' },
@@ -46,13 +48,10 @@ export function renderHome(el) {
       h('div', {}, h('div', { class: 'big-date' }, `${d.getMonth() + 1}月${d.getDate()}日`), h('div', { class: 'muted' }, `星期${WEEK[d.getDay()]}`)),
       h('div', { class: 'quick' }, input,
         h('div', { class: 'quick-btns' },
-          h('button', { onclick: addNote }, '記下'),
-          h('button', { onclick: () => { const v = input.value.trim(); window.openTask(null, { title: v, date: t }); input.value = ''; } }, '建成任務'))))),
+          h('button', { onclick: addToday }, '記下'),
+          h('button', { onclick: () => { const v = input.value.trim(); window.openTask(null, { title: v, date: t }); input.value = ''; } }, '詳細'))))),
     h('div', { class: 'home-grid' },
-      h('section', { class: 'block today-block' },
-        h('h3', {}, '今天'),
-        timed, untimed, noteRows.length > 0 && (timed.length > 0 || untimed.length > 0) ? h('div', { class: 'thin-sep' }) : null, noteRows,
-        !timed.length && !untimed.length && !noteRows.length ? empty('沒有安排') : null),
+      h('section', { class: 'block today-block' }, h('h3', {}, '今天'), todayList),
       h('div', { class: 'home-side' },
         h('section', { class: 'block' },
           h('h3', {}, '接下來一週'),
@@ -85,21 +84,38 @@ function openAllTasks() {
   db.onChange(() => list.isConnected && render());
 }
 
-const withTime = (time, row) => { row.prepend(h('span', { class: 'time' }, time)); return row; };
-
-function courseRow(c) {
-  const next = courseTasks(c)[0];
-  return h('div', { class: 'task routine-row' },
-    h('span', { class: 'time' }, PERIODS[c.start][1]),
-    h('div', { class: 'task-main', onclick: () => next && window.openTask(next.id) },
-      h('div', { class: 'task-title' }, c.name, c.room ? h('span', { class: 'muted small' }, '　' + c.room) : null),
-      h('div', { class: 'task-meta' }, h('span', { class: 'when' }, `第 ${PERIODS[c.start][0]}${c.end > c.start ? '–' + PERIODS[c.end][0] : ''} 節`),
-        next ? h('span', { class: 'when' }, `・${next.title} ${fmtDate(next.date)}`) : null)));
-}
-
-function noteRow(n) {
-  return h('div', { class: 'task note' + (n.done ? ' done' : '') },
-    h('input', { type: 'checkbox', checked: n.done, onchange: e => db.put('notes', { id: n.id, done: e.target.checked }) }),
-    h('div', { class: 'task-main' }, h('div', { class: 'task-title' }, n.text, n.date !== today() ? h('span', { class: 'muted small' }, '　' + fmtDate(n.date)) : null)),
-    h('button', { class: 'icon', title: '刪除', onclick: () => db.remove('notes', n.id) }, '×'));
+// 長按（約 0.35 秒）後拖曳排序；手指／滑鼠一開始就移動則視為捲動
+function sortable(list, onDrop) {
+  let suppress = false;
+  list.addEventListener('click', e => { if (suppress) { e.stopPropagation(); e.preventDefault(); suppress = false; } }, true);
+  list.addEventListener('contextmenu', e => e.preventDefault());
+  list.addEventListener('pointerdown', e => {
+    const row = e.target.closest('[data-sort]');
+    if (!row || e.button > 0 || e.target.closest('input, button')) return;
+    const sx = e.clientX, sy = e.clientY;
+    let dragging = false;
+    const timer = setTimeout(() => { dragging = true; row.classList.add('lifting'); navigator.vibrate?.(15); }, 350);
+    const blockScroll = ev => { if (dragging) ev.preventDefault(); };
+    const move = ev => {
+      if (!dragging) { if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) end(); return; }
+      ev.preventDefault();
+      const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-sort]');
+      if (over && over !== row && over.parentNode === list) {
+        const r = over.getBoundingClientRect();
+        list.insertBefore(row, ev.clientY > r.top + r.height / 2 ? over.nextSibling : over);
+      }
+    };
+    const end = () => {
+      clearTimeout(timer);
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', end);
+      row.removeEventListener('touchmove', blockScroll);
+      row.classList.remove('lifting');
+    };
+    const up = () => {
+      const was = dragging; end();
+      if (was) { suppress = true; setTimeout(() => (suppress = false), 300); onDrop([...list.querySelectorAll('[data-sort]')].map(x => x.dataset.sort)); }
+    };
+    addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', end);
+    row.addEventListener('touchmove', blockScroll, { passive: false });
+  });
 }
