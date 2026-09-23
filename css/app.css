@@ -293,9 +293,20 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .set-sec h3 { margin: 0 0 6px; font-size: 14px; }
 .set-row { display: flex; gap: 6px; align-items: center; padding: 4px 0; }
 .set-sec button.link { text-decoration: underline; }
-.login input { flex: 1; min-width: 140px; }
-.sync-error { color: var(--danger); }
-.sync-ok { color: var(--muted); }
+/* 帳號按鈕與帳號頁 */
+.acct-btn { border: 1px solid var(--ink); background: none; padding: 3px 12px; font-size: 14px; display: flex; gap: 6px; align-items: center; max-width: 150px; }
+.acct-btn.in { border-color: var(--line); }
+.acct-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 99px; flex: none; background: var(--muted); }
+.dot.sync-ok { background: #5b8a4e; }
+.dot.sync-syncing { background: var(--today); }
+.dot.sync-error { background: var(--danger); }
+.account-modal { width: min(400px, 100%); margin-top: 10vh; }
+.account { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+.acct-seg { align-self: flex-start; }
+.acct-email { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+.acct-state.sync-error { color: var(--danger); }
+.acct-state.sync-ok, .acct-state.sync-syncing { color: var(--muted); }
 .help ol { padding-left: 22px; line-height: 2; margin: 4px 0 12px; }
 
 /* ---------- 手機 ---------- */

@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { h, popover, ask } from './ui.js';
 import { openTask } from './editor.js';
 import { openSettings } from './settings.js';
+import { openAccount, syncLabel } from './account.js';
 import { renderSchedule } from './pages/schedule.js';
 import { renderHome } from './pages/home.js';
 import { renderCalendar } from './pages/calendar.js';
@@ -11,7 +12,8 @@ import { renderFlow } from './pages/flow.js';
 window.openTask = openTask;
 db.init();
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用
-import('./sync.js').then(s => s.start()).catch(e => console.warn('同步未啟動', e));
+let syncStatus = null;
+import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); }).catch(e => console.warn('同步未啟動', e));
 
 // 課表 ← 首頁 → 月曆／看板 → 流程圖
 const PAGES = [['schedule', '課表', renderSchedule], ['home', '首頁', renderHome], ['calendar', '月曆', renderCalendar], ['flow', '流程圖', renderFlow]];
@@ -30,7 +32,15 @@ function renderHeader() {
     h('button', { class: 'cal-switch', onclick: e => calMenu(e.currentTarget) }, h('span', {}, cal?.name ?? '行事曆'), h('span', { class: 'caret' }, '▾')),
     h('span', { class: 'spacer' }),
     h('button', { class: 'primary new-task', onclick: () => openTask(null) }, '＋ 任務'),
+    accountButton(),
     h('button', { class: 'icon gear', title: '設定', onclick: openSettings }, '⚙'));
+}
+
+// 右上帳號鈕：沒登入顯示「登入」；登入後顯示帳號名稱＋同步狀態小圓點
+function accountButton() {
+  const u = syncStatus?.user;
+  return h('button', { class: 'acct-btn' + (u ? ' in' : ''), title: u ? `${u.email}・${syncLabel(syncStatus)}` : '登入以同步', onclick: openAccount },
+    u ? [h('span', { class: 'dot sync-' + syncStatus.state }), h('span', { class: 'acct-name' }, u.email.split('@')[0])] : '登入');
 }
 
 function calMenu(anchor) {

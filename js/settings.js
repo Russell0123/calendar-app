@@ -20,8 +20,6 @@ export function openSettings() {
     const cals = db.calendars();
     const cur = db.currentCal();
     body.replaceChildren(
-      syncSection(sec),
-
       sec('提醒',
         h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準'),
         h('div', { class: 'muted small' }, '實際跳通知要等打包成 App 後才會啟用。')),
@@ -51,40 +49,6 @@ export function openSettings() {
   }
 
   render();
-}
-
-// 雲端同步：email + 密碼登入
-function syncSection(sec) {
-  const box = h('div', { class: 'muted small' }, '載入中…');
-  let sync;
-  const render = () => {
-    const s = sync.status;
-    if (!s.user) {
-      const email = h('input', { type: 'email', placeholder: 'email', autocomplete: 'username' });
-      const pw = h('input', { type: 'password', placeholder: '密碼（至少 6 碼）', autocomplete: 'current-password' });
-      const go = fn => async () => {
-        if (!email.value.trim() || pw.value.length < 6) return toast('請填 email 和至少 6 碼密碼');
-        try { await fn(email.value.trim(), pw.value); } catch (e) { toast(e.message); }
-      };
-      box.replaceChildren(
-        h('div', { class: 'muted small' }, '登入後電腦和手機的資料會自動同步。'),
-        h('div', { class: 'row wrap login' }, email, pw),
-        h('div', { class: 'row wrap' },
-          h('button', { class: 'primary', onclick: go(sync.signIn) }, '登入'),
-          h('button', { onclick: go(async (e, p) => { if (!await sync.signUp(e, p)) toast('請到信箱點確認信，再回來登入'); }) }, '註冊')));
-    } else {
-      const label = { syncing: '同步中…', ok: `已同步 ${s.last?.toLocaleTimeString().slice(0, -3) ?? ''}`, error: '同步失敗：' + s.error, off: '' }[s.state];
-      box.replaceChildren(
-        h('div', { class: 'row wrap' }, h('span', {}, s.user.email), h('span', { class: 'muted small sync-' + s.state }, label)),
-        h('div', { class: 'row wrap' },
-          h('button', { onclick: () => sync.syncNow() }, '立即同步'),
-          h('button', { onclick: () => confirmBox('登出？這台裝置的資料會保留。', () => sync.signOut(), '登出') }, '登出')));
-    }
-  };
-  // 動態載入：離線打不開同步模組時，設定頁其他部分照常可用
-  import('./sync.js').then(m => { sync = m; sync.onStatus(() => box.isConnected && render()); render(); })
-    .catch(() => box.replaceChildren('目前無法連線，同步功能暫時不能用'));
-  return sec('雲端同步', box);
 }
 
 // 匯入 Google 日曆（.ics）：選日期範圍與標籤，可重複使用；同一事件再匯入會更新不會重複
