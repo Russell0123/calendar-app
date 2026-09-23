@@ -358,3 +358,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
   .prop-k { flex-basis: 64px; }
   .flow { min-height: 300px; }
 }
+
+/* 重複任務 */
+.rep { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.repeat-pop select, .repeat-pop input[type=date] { width: 100%; }
+.num { width: 64px; }
+.col { display: flex; flex-direction: column; gap: 6px; }
+.menu .row.pad input[type=datetime-local] { flex: 1; min-width: 0; }

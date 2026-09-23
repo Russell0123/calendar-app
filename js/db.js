@@ -1,6 +1,5 @@
 // 本地資料層：所有讀寫都經過這裡。資料先存本機（離線可用），變動會排進 sync.dirty 由 sync.js 上傳
 import { SEED } from './seed.js';
-import { courseRows } from './periods.js';
 
 const KEY = 'calapp.v2';
 // 除了 calendars 以外，每張表都有 calendar_id → 每個行事曆完全獨立
@@ -33,12 +32,6 @@ export function init() {
     if (s && s.version === 2) {
       state = s; TABLES.forEach(t => (state[t] ??= {}));
       state.sync ??= blankSync();
-      // 一次性：把課表匯入既有資料
-      if (!state.meta.courses_seeded) {
-        const cal = calId();
-        if (cal && !all('courses', c => c.calendar_id === cal).length) courseRows(cal).forEach(r => rawPut('courses', r));
-        state.meta.courses_seeded = true; persist();
-      }
       // 一次性：課程連上科目標籤，並移除舊的科目標籤
       if (!state.meta.course_tags_v1) { calendars().forEach(c => linkCourses(c.id, true)); state.meta.course_tags_v1 = true; persist(); }
       // 一次性：首頁不再有隨手記，舊的隨手記轉成當天的任務
@@ -192,6 +185,20 @@ export const tagByName = name => tags().find(t => t.name === name);
 // ---------- 任務查詢 ----------
 export const tasks = pred => mine('tasks', pred);
 export const onDay = (t, day) => t.date && (t.date === day || (t.end_date && t.date <= day && day <= t.end_date));
+
+// 勾選完成：重複任務只標記那一次（t._occ），一般任務改狀態
+export function setDone(t, done) {
+  if (!t._occ) return put('tasks', { id: t.id, status: done ? 'done' : 'todo' });
+  const set = new Set(get('tasks', t.id)?.done_dates || []);
+  done ? set.add(t._occ) : set.delete(t._occ);
+  put('tasks', { id: t.id, done_dates: [...set] });
+}
+
+// 重複任務只刪掉某一次
+export function skipOccurrence(id, date) {
+  const t = get('tasks', id);
+  if (t) put('tasks', { id, skip_dates: [...new Set([...(t.skip_dates || []), date])] });
+}
 export const sortByDate = (a, b) => (a.date || '9999').localeCompare(b.date || '9999') || (a.start_time || '99').localeCompare(b.start_time || '99');
 
 // 篩選：同分組 OR、跨分組 AND

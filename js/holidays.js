@@ -58,7 +58,7 @@ export async function autoImport({ force = false } = {}) {
       for (const r of runs) {
         const id = await stableId(`${cal.id}|holiday|${r.date}`);
         if (db.everExisted('tasks', id)) continue;
-        tagId ??= db.ensureTag('國定假日', 'gray', cal.id);
+        tagId ??= db.ensureTag('國定假日', 'darkgray', cal.id);
         rows.push({
           id, calendar_id: cal.id, title: r.title, notes: '', date: r.date, end_date: r.end_date,
           start_time: null, end_time: null, status: 'todo', priority: 0,

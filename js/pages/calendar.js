@@ -2,6 +2,7 @@
 import * as db from '../db.js';
 import { h, today, ymd, taskRow, empty, fmtDate, fmtWhen, taskColor, WEEK, chip, popover, ask, confirmBox } from '../ui.js';
 import { tagPicker } from '../tags.js';
+import { occurrences } from '../repeat.js';
 
 let mode = 'month';
 let cursor = null, selected = null;
@@ -28,7 +29,8 @@ function month(el, bar, root) {
   const [y, m] = cursor.split('-').map(Number);
   const first = new Date(y, m - 1, 1);
   const start = new Date(y, m - 1, 1 - first.getDay());
-  const tasks = db.tasks(x => x.date);
+  // 重複任務展開成這 6 週內的每一次
+  const tasks = occurrences(db.tasks(), ymd(start), ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 41)));
   const move = n => { cursor = ymd(new Date(y, m - 1 + n, 1)).slice(0, 7); renderCalendar(root); };
 
   bar.append(
@@ -73,7 +75,7 @@ function month(el, bar, root) {
           class: 'ev' + (x.status === 'done' ? ' done' : '') + (x.date < days[0] ? ' cl' : '') + ((x.end_date || x.date) > days[6] ? ' cr' : '') + (tags.length && lines > 1 ? ' has-tags' : ''),
           // --ln：可用行數；--lw：寬螢幕多顯示一行標籤時，標題剩下的行數
           style: { gridColumn: `${s + 1} / ${e + 2}`, gridRow: lane + 2, background: bg, color: fg, '--ln': lines, '--lw': Math.max(1, lines - 1) },
-          onclick: () => window.openTask(x.id),
+          onclick: () => window.openTask(x.id, {}, { occ: x._occ }),
         }, h('div', { class: 'ev-title' }, x.start_time ? h('span', { class: 'ev-time' }, x.start_time) : null, x.title),
           tags.length && lines > 1 ? h('div', { class: 'ev-tags' }, tags.map(o => chip(o))) : null);
       }),

@@ -4,6 +4,7 @@ import * as db from '../db.js';
 import { h, modal, chip, today, parseYmd, addDays, WEEK, confirmBox, toast, taskColor } from '../ui.js';
 import { tagPicker } from '../tags.js';
 import { PERIODS } from '../periods.js';
+import { occurrences } from '../repeat.js';
 
 let weekStart = null; // 週一
 
@@ -36,7 +37,7 @@ export function renderSchedule(el) {
     days.flatMap((d, i) => PERIODS.map((_, p) => h('div', { class: 'tt-cell', style: { gridColumn: i + 2, gridRow: p + 2 }, onclick: () => editCourse(null, { day: d, start: p, end: p }) }))),
     courses.filter(c => days.includes(c.day)).map(c => {
       const date = dateOf(c.day);
-      const due = db.tasks(x => db.onDay(x, date) && hasTag(x, c.tag_id)).sort(db.sortByDate);
+      const due = occurrences(db.tasks(x => hasTag(x, c.tag_id)), date, date).sort(db.sortByDate);
       return h('div', { class: 'tt-course' + (due.length ? ' has-due' : ''), style: { gridColumn: days.indexOf(c.day) + 2, gridRow: `${c.start + 2} / ${c.end + 3}` }, onclick: () => editCourse(c.id) },
         h('div', { class: 'tt-name' }, c.name),
         c.room ? h('div', { class: 'tt-room' }, c.room) : null,
@@ -44,7 +45,7 @@ export function renderSchedule(el) {
         due.map(x => {
           const [bg, fg] = taskColor(x);
           return h('div', { class: 'tt-task' + (x.status === 'done' ? ' done' : ''), style: { background: bg, color: fg },
-            onclick: e => { e.stopPropagation(); window.openTask(x.id); } }, x.title);
+            onclick: e => { e.stopPropagation(); window.openTask(x.id, {}, { occ: x._occ }); } }, x.title);
         }));
     }));
 

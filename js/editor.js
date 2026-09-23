@@ -1,17 +1,23 @@
 // 任務頁（仿 Notion）：標題 + 屬性列 + 筆記，關閉時自動儲存
 import * as db from './db.js';
-import { h, modal, popover, chip, fmtWhen, confirmBox } from './ui.js';
+import { h, modal, popover, chip, fmtWhen, fmtDate, confirmBox, parseYmd, WEEK } from './ui.js';
 import { tagPicker } from './tags.js';
+import { repeatLabel } from './repeat.js';
 
-const REMIND = [[0, '準時'], [10, '10 分鐘前'], [60, '1 小時前'], [180, '3 小時前'], [1440, '1 天前'], [4320, '3 天前'], [10080, '1 週前']];
-const remindLabel = m => REMIND.find(r => r[0] === m)?.[1] || `${m} 分鐘前`;
+const REMIND = [[0, '準時'], [60, '前一小時'], [1440, '前一天'], [2880, '前兩天'], [4320, '前三天'], [10080, '前一週']];
+const OLD_REMIND = { 10: '10 分鐘前', 180: '3 小時前' };
+const remindLabel = m => REMIND.find(r => r[0] === m)?.[1] || OLD_REMIND[m] || `${m} 分鐘前`;
+const fmtAt = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)} ${s.slice(11, 16)}`;
 
-export function openTask(id, preset = {}) {
+// opts.occ：從重複任務的某一次打開（勾完成、刪除只影響那一次）
+export function openTask(id, preset = {}, opts = {}) {
   const orig = id ? db.get('tasks', id) : null;
   const d = orig ? structuredClone(orig) : {
     id: db.uid(), title: '', notes: '', date: null, end_date: null, start_time: null, end_time: null,
     status: 'todo', priority: 0, tag_ids: [], reminders: [], ...preset,
   };
+  d.remind_at ??= [];
+  const occ = orig?.repeat?.freq ? opts.occ : null;
   let deleted = false;
 
   const blankText = h('span', { class: 'blank' }, '空白');
@@ -27,11 +33,23 @@ export function openTask(id, preset = {}) {
   tagV.onclick = () => tagPicker(tagV, d.tag_ids, renderTags);
 
   const remindV = h('div', { class: 'pv chips' });
-  const renderRemind = () => remindV.replaceChildren(...(d.reminders.length ? d.reminders.map(m => h('span', { class: 'chip plain' }, remindLabel(m))) : [blankText.cloneNode(true)]));
+  const renderRemind = () => remindV.replaceChildren(...(d.reminders.length || d.remind_at.length
+    ? [...d.reminders.map(m => h('span', { class: 'chip plain' }, remindLabel(m))), ...d.remind_at.map(a => h('span', { class: 'chip plain' }, '⏰ ' + fmtAt(a)))]
+    : [blankText.cloneNode(true)]));
   remindV.onclick = () => remindPop(remindV, d, renderRemind);
 
-  const status = h('label', { class: 'pv status' },
-    h('input', { type: 'checkbox', checked: d.status === 'done', onchange: e => (d.status = e.target.checked ? 'done' : 'todo') }), '已完成');
+  // 重複任務從某一次打開：勾的是「這一次」
+  const status = occ
+    ? h('label', { class: 'pv status' },
+      h('input', { type: 'checkbox', checked: (d.done_dates || []).includes(occ), onchange: e => {
+        const set = new Set(d.done_dates || []); e.target.checked ? set.add(occ) : set.delete(occ); d.done_dates = [...set];
+      } }), `這一次（${fmtDate(occ)}）已完成`)
+    : h('label', { class: 'pv status' },
+      h('input', { type: 'checkbox', checked: d.status === 'done', onchange: e => (d.status = e.target.checked ? 'done' : 'todo') }), '已完成');
+
+  const repeatV = h('div', { class: 'pv' });
+  const renderRepeat = () => repeatV.replaceChildren(d.repeat?.freq && d.date ? repeatLabel(d) : blankText.cloneNode(true));
+  repeatV.onclick = () => repeatPop(repeatV, d, () => { renderRepeat(); renderDate(); });
 
   const linkV = h('div', { class: 'pv links' });
   const renderLinks = () => {
@@ -52,7 +70,7 @@ export function openTask(id, preset = {}) {
     onclick: () => { d.priority = d.priority === n ? 0 : n; renderStars(); },
   }, '★')), !d.priority ? h('span', { class: 'blank' }, ' 未標記') : null);
 
-  renderDate(); renderTags(); renderRemind(); renderLinks(); renderStars();
+  renderDate(); renderTags(); renderRemind(); renderLinks(); renderStars(); renderRepeat();
 
   const title = h('textarea', { class: 'page-title', rows: 1, placeholder: '未命名', value: d.title,
     oninput: e => { d.title = e.target.value.replace(/\n/g, ''); fit(); },
@@ -62,13 +80,17 @@ export function openTask(id, preset = {}) {
 
   const close = modal(h('div', { class: 'page' },
     h('div', { class: 'page-head' },
-      h('span', { class: 'muted small' }, db.currentCal()?.name ?? ''), h('span', { class: 'spacer' }),
-      orig ? h('button', { class: 'icon', title: '刪除任務', onclick: () => confirmBox('刪除這個任務？', () => { deleted = true; db.remove('tasks', d.id); close(); }) }, '刪除') : null,
+      h('span', { class: 'muted small' }, db.currentCal()?.name ?? ''),
+      occ ? h('span', { class: 'muted small' }, `・重複任務，這次是 ${fmtDate(occ)}`) : null,
+      h('span', { class: 'spacer' }),
+      orig ? h('button', { class: 'icon', title: '刪除任務', onclick: () => occ
+        ? deleteOccurrence(occ, () => { d.skip_dates = [...new Set([...(d.skip_dates || []), occ])]; close(); }, () => { deleted = true; db.remove('tasks', d.id); close(); })
+        : confirmBox('刪除這個任務？', () => { deleted = true; db.remove('tasks', d.id); close(); }) }, '刪除') : null,
       h('button', { class: 'icon', onclick: () => close() }, '✕')),
     h('div', { class: 'page-body' },
       title,
       h('div', { class: 'props' },
-        prop('日期', dateV), prop('標籤', tagV), prop('重要', starV), prop('狀態', status), prop('提醒', remindV), prop('流程', linkV)),
+        prop('日期', dateV), prop('重複', repeatV), prop('標籤', tagV), prop('重要', starV), prop('狀態', status), prop('提醒', remindV), prop('流程', linkV)),
       notes)), { cls: 'page-modal', onClose: save });
 
   function save() {
@@ -79,6 +101,7 @@ export function openTask(id, preset = {}) {
     }
     for (const k of ['end_date', 'start_time', 'end_time']) if (!d[k]) d[k] = null;
     if (d.end_date && (!d.date || d.end_date <= d.date)) d.end_date = null;
+    if (!d.date) d.repeat = null; // 沒日期不能重複
     db.put('tasks', d);
   }
   requestAnimationFrame(() => { fit(); if (!orig) title.focus(); });
@@ -108,15 +131,77 @@ function datePop(anchor, d, update) {
   p = popover(anchor, box, { width: 290 });
 }
 
+// 提醒：提前（相對任務時間）或指定某個時間點
 function remindPop(anchor, d, update) {
   const box = h('div', { class: 'menu' });
-  const render = () => box.replaceChildren(...REMIND.map(([m, l]) => h('div', { class: 'menu-row', onclick: () => {
-    d.reminders = d.reminders.includes(m) ? d.reminders.filter(x => x !== m) : [...d.reminders, m].sort((a, b) => a - b);
-    update(); render();
-  } }, l, h('span', { class: 'spacer' }), d.reminders.includes(m) ? '✓' : '')),
-  h('div', { class: 'muted small pad' }, `沒設時間的任務以 ${db.meta().default_remind_time} 為準`));
+  const at = h('input', { type: 'datetime-local', value: d.date ? `${d.date}T${d.start_time || db.meta().default_remind_time || '09:00'}` : '' });
+  const render = () => box.replaceChildren(
+    ...REMIND.map(([m, l]) => h('div', { class: 'menu-row', onclick: () => {
+      d.reminders = d.reminders.includes(m) ? d.reminders.filter(x => x !== m) : [...d.reminders, m].sort((a, b) => a - b);
+      update(); render();
+    } }, l, h('span', { class: 'spacer' }), d.reminders.includes(m) ? '✓' : '')),
+    ...d.remind_at.map(a => h('div', { class: 'menu-row', onclick: () => { d.remind_at = d.remind_at.filter(x => x !== a); update(); render(); } },
+      '⏰ ' + fmtAt(a), h('span', { class: 'spacer' }), '✕')),
+    h('div', { class: 'menu-sep' }),
+    h('div', { class: 'row pad' }, at, h('button', { onclick: () => {
+      if (!at.value || d.remind_at.includes(at.value)) return;
+      d.remind_at = [...d.remind_at, at.value].sort(); update(); render();
+    } }, '指定時間')),
+    h('div', { class: 'muted small pad' }, `沒設時間的任務以 ${db.meta().default_remind_time} 為準`));
   render();
-  popover(anchor, box, { width: 220 });
+  popover(anchor, box, { width: 280 });
+}
+
+// 重複：每天／每週幾／每月同一天或第 N 個週幾／每年，可設間隔與結束日
+function repeatPop(anchor, d, update) {
+  const box = h('div', { class: 'datepop repeat-pop' });
+  let p;
+  const render = () => {
+    if (!d.date) { box.replaceChildren(h('div', { class: 'muted' }, '先設定日期，才能設定重複')); p?.place(); return; }
+    const r = d.repeat || {};
+    const s = parseYmd(d.date), wd = s.getDay();
+    const n = Math.ceil(s.getDate() / 7);
+    const isLastWeek = s.getDate() + 7 > new Date(s.getFullYear(), s.getMonth() + 1, 0).getDate();
+    const set = patch => { d.repeat = patch && { ...r, ...patch }; update(); render(); };
+    const unit = { daily: '天', weekly: '週', monthly: '個月', yearly: '年' }[r.freq];
+
+    box.replaceChildren(
+      h('select', { onchange: e => set(e.target.value ? { freq: e.target.value, interval: r.interval || 1, weekdays: [wd], monthly: 'date', nth: null } : null) },
+        [['', '不重複'], ['daily', '每天'], ['weekly', '每週'], ['monthly', '每月'], ['yearly', '每年']].map(([v, l]) => h('option', { value: v, selected: (r.freq || '') === v }, l))),
+      r.freq ? h('label', { class: 'row' }, '每', h('input', { type: 'number', min: 1, max: 99, value: r.interval || 1, class: 'num',
+        onchange: e => set({ interval: Math.max(1, +e.target.value || 1) }) }), unit) : null,
+      r.freq === 'weekly' ? h('div', { class: 'chips' }, [1, 2, 3, 4, 5, 6, 0].map(x => {
+        const on = (r.weekdays || [wd]).includes(x);
+        return h('span', { class: 'chip day' + (on ? ' on' : ''), onclick: () => {
+          const list = (r.weekdays || [wd]).filter(y => y !== x);
+          set({ weekdays: on ? (list.length ? list : [x]) : [...list, x] });
+        } }, WEEK[x]);
+      })) : null,
+      r.freq === 'monthly' ? h('div', { class: 'col' },
+        ...[
+          ['date', null, `每月 ${s.getDate()} 號`],
+          n <= 4 ? ['nth', n, `每月第 ${n} 個週${WEEK[wd]}`] : null,
+          isLastWeek ? ['nth', -1, `每月最後一個週${WEEK[wd]}`] : null,
+        ].filter(Boolean).map(([mode, nth, label]) => h('label', { class: 'check' },
+          h('input', { type: 'radio', name: 'mrep', checked: r.monthly === mode && (mode === 'date' || (r.nth ?? n) === nth), onchange: () => set({ monthly: mode, nth }) }), label))) : null,
+      r.freq ? h('label', { class: 'toggle' }, '結束於',
+        h('input', { type: 'checkbox', checked: !!r.until, onchange: e => set({ until: e.target.checked ? d.date : null }) })) : null,
+      r.until ? h('input', { type: 'date', value: r.until, min: d.date, onchange: e => set({ until: e.target.value || null }) }) : null,
+      r.freq ? h('div', { class: 'muted small' }, repeatLabel(d)) : null);
+    p?.place();
+  };
+  render();
+  p = popover(anchor, box, { width: 290 });
+}
+
+// 刪除重複任務：只刪這一次，或整個系列
+function deleteOccurrence(occ, onlyThis, all) {
+  const close = modal(h('div', { class: 'confirm' },
+    h('div', { class: 'confirm-msg' }, '這是重複任務，要刪除哪些？'),
+    h('div', { class: 'row end wrap' },
+      h('button', { onclick: () => close() }, '取消'),
+      h('button', { onclick: () => { close(); onlyThis(); } }, `只刪這一次（${fmtDate(occ)}）`),
+      h('button', { class: 'primary', onclick: () => { close(); all(); } }, '刪除全部'))), { cls: 'confirm-modal' });
 }
 
 function linkPop(anchor, selfId, add, update) {

@@ -1,13 +1,14 @@
 // 首頁：像助理的白板。今天的行程、任務、隨手記排在一起
 import * as db from '../db.js';
 import { h, taskRow, empty, today, addDays, parseYmd, WEEK, fmtDate, modal } from '../ui.js';
+import { occurrences } from '../repeat.js';
 
 export function renderHome(el) {
   const t = today();
   const d = parseYmd(t);
 
   // 今天：只放任務。長按拖曳排過的依 day_order，其餘依時間、建立順序
-  const todayTasks = db.tasks(x => db.onDay(x, t)).sort((a, b) =>
+  const todayTasks = occurrences(db.tasks(), t, t).sort((a, b) =>
     (a.day_order ?? 1e9) - (b.day_order ?? 1e9) || (a.start_time || '99').localeCompare(b.start_time || '99') || a.created_at.localeCompare(b.created_at));
   const todayList = h('div', { class: 'today-list' }, todayTasks.map(x => {
     const row = taskRow(x, { showDate: false });
@@ -17,7 +18,7 @@ export function renderHome(el) {
   }));
   sortable(todayList, ids => db.putMany('tasks', ids.map((id, i) => ({ id, day_order: i }))));
 
-  const upcoming = db.tasks(x => x.date && x.date > t && x.date <= addDays(t, 7)).sort(db.sortByDate);
+  const upcoming = occurrences(db.tasks(), addDays(t, 1), addDays(t, 7)).filter(x => x.date > t).sort(db.sortByDate);
   const byDay = {};
   upcoming.forEach(x => (byDay[x.date] ??= []).push(x));
   // 待安排：依星數分組（多→少），同組新的在前；首頁最多 15 項

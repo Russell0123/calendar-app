@@ -15,6 +15,13 @@ export function h(tag, attrs = {}, ...kids) {
   return el;
 }
 
+// 讓 el.replaceChildren(...) 跟 h() 一樣：略過 null／false、自動攤平陣列
+// （原生版本會把 null 顯示成「null」、把陣列顯示成「[object …]」）
+const nativeReplace = Element.prototype.replaceChildren;
+Element.prototype.replaceChildren = function (...kids) {
+  return nativeReplace.apply(this, kids.flat(Infinity).filter(c => c != null && c !== false));
+};
+
 // ---------- 日期 ----------
 export const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const today = () => ymd(new Date());
@@ -32,7 +39,7 @@ export function fmtWhen(t) {
 
 // ---------- 顏色（沉穩色系） ----------
 export const COLORS = {
-  gray: ['#e6e2da', '#4a463f', '灰'], brown: ['#e8dacb', '#6b4a33', '棕'], orange: ['#f0d9c0', '#8a5424', '橙'],
+  gray: ['#e6e2da', '#4a463f', '灰'], darkgray: ['#cdc7bb', '#2b2a27', '深灰'], brown: ['#e8dacb', '#6b4a33', '棕'], orange: ['#f0d9c0', '#8a5424', '橙'],
   yellow: ['#ede0b8', '#6b571a', '黃'], green: ['#d6e0cf', '#3d5a35', '綠'], blue: ['#d3dde4', '#34516a', '藍'],
   purple: ['#ddd6e3', '#54436b', '紫'], pink: ['#ead5da', '#7a3f52', '粉'], red: ['#eacfc7', '#8a3b2c', '紅'],
 };
@@ -109,9 +116,9 @@ export function popover(anchor, content, { onClose, width = 300 } = {}) {
 // ---------- 任務列 ----------
 export function taskRow(t, { showDate = true } = {}) {
   return h('div', { class: 'task' + (t.status === 'done' ? ' done' : '') },
-    h('input', { type: 'checkbox', checked: t.status === 'done', onclick: e => { e.stopPropagation(); db.put('tasks', { id: t.id, status: e.target.checked ? 'done' : 'todo' }); } }),
-    h('div', { class: 'task-main', onclick: () => window.openTask(t.id) },
-      h('div', { class: 'task-title' }, t.title || '（未命名）', t.priority ? h('span', { class: 'stars' }, '★'.repeat(t.priority)) : null),
+    h('input', { type: 'checkbox', checked: t.status === 'done', onclick: e => { e.stopPropagation(); db.setDone(t, e.target.checked); } }),
+    h('div', { class: 'task-main', onclick: () => window.openTask(t.id, {}, { occ: t._occ }) },
+      h('div', { class: 'task-title' }, t.title || '（未命名）', t.repeat?.freq ? h('span', { class: 'rep', title: '重複' }, '↻') : null, t.priority ? h('span', { class: 'stars' }, '★'.repeat(t.priority)) : null),
       (showDate && t.date) || t.tag_ids?.length ? h('div', { class: 'task-meta' },
         showDate && t.date ? h('span', { class: 'when' }, fmtWhen(t)) : null, db.taskTags(t).map(o => chip(o))) : null));
 }

@@ -132,7 +132,7 @@ const TASK_FIELDS = {
   reminders: { type: 'array', items: { type: 'integer' }, description: '提前幾分鐘提醒，例如 [1440] = 前一天、[60] = 前一小時' },
 };
 
-const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+const COLORS = ['gray', 'darkgray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
 const COURSE_FIELDS = {
   name: { type: 'string', description: '課程名稱（課表上顯示的全名）' },
   weekday: { type: 'integer', minimum: 1, maximum: 7, description: '星期幾：1＝週一 … 7＝週日' },
