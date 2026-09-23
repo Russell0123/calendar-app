@@ -1,6 +1,6 @@
 // 行事曆 AI 連接器（MCP 伺服器）
 // 任何支援 MCP 的 AI（Claude 自訂連接器等）用個人金鑰連線，只能讀寫該使用者自己的資料。
-// 連線網址：https://<project>.supabase.co/functions/v1/calendar-mcp?key=<個人金鑰>
+// 連線網址：https://<project>.supabase.co/functions/v1/calendar-mcp/<個人金鑰>（舊格式 ?key= 也可以）
 // 資料寫進 records 表後，App 會透過即時同步馬上看到。
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -313,10 +313,15 @@ async function handle(ctx: Ctx, m: Row) {
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const url = new URL(req.url);
+  const segs = url.pathname.split('/').filter(Boolean);
+  // AI 客戶端連線前會探測 OAuth 設定；明確回 404 表示「不需要登入」
+  if (segs.includes('.well-known')) return json({ error: 'not found' }, 404);
   if (req.method !== 'POST') return json({ error: '請用 MCP 客戶端以 POST 連線' }, 405);
 
-  const url = new URL(req.url);
-  const key = url.searchParams.get('key') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null;
+  // 金鑰放在路徑最後一段（…/calendar-mcp/cal_xxx）；也相容舊的 ?key= 與 Authorization: Bearer
+  const key = segs.find(s => s.startsWith('cal_')) || url.searchParams.get('key')
+    || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null;
   const uid = await userFromKey(key);
   if (!uid) return json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: '金鑰無效或已撤銷，請到 App 帳號頁重新產生' } }, 401);
 

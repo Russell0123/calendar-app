@@ -70,7 +70,7 @@ async function renderAI(box, sync) {
     const key = 'cal_' + b64url(crypto.getRandomValues(new Uint8Array(24)));
     const { error } = await sync.sb.from('api_keys').insert({ key_hash: await sha256(key), prefix: key.slice(0, 8), name: new Date().toLocaleDateString() });
     if (error) return toast('產生失敗：' + error.message);
-    showUrl(`${endpoint}?key=${key}`);
+    showUrl(`${endpoint}/${key}`);
     renderAI(box, sync);
   };
 
