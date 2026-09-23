@@ -18,6 +18,15 @@ const applyAccent = () => {
 };
 applyAccent();
 db.onChange(applyAccent);
+// 新版偵測：App 從背景回來時比對 version.json，有更新就重新載入（手機 App 常駐背景，不會自己重開）
+let loadedVersion = null;
+const fetchVersion = () => fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => j.v).catch(() => null);
+fetchVersion().then(v => (loadedVersion = v));
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden || !loadedVersion) return;
+  const v = await fetchVersion();
+  if (v && v !== loadedVersion && !document.querySelector('.modal-bg')) location.reload();
+});
 // 網路優先的快取：更新馬上看得到，離線也能開
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用

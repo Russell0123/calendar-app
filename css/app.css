@@ -5,10 +5,6 @@
   --r: 4px; --top: 50px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bg: #1d1c1a; --paper: #262522; --ink: #e8e3d8; --muted: #9a9387; --line: #3a3833; --rule: #d8d2c4; --hover: #302e2a; --soft: #34322d; --today: #d08a5a; color-scheme: dark; }
-}
-:root[data-theme="dark"] { --bg: #1d1c1a; --paper: #262522; --ink: #e8e3d8; --muted: #9a9387; --line: #3a3833; --rule: #d8d2c4; --hover: #302e2a; --soft: #34322d; --today: #d08a5a; color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -370,12 +366,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 :root { --accent: var(--ink); --on-accent: var(--bg); --accent-line: var(--ink); }
 :root[data-accent="neon"] { --accent: #3dff5c; --on-accent: #0f2410; --accent-line: #1f9e37; --today: #1f9e37;
   --bg: #ffffff; --paper: #ffffff; --hover: #f1f3f1; --soft: #eceeec; --line: #e1e4e1; --muted: #858a85; --rule: #c5cac5; }
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="neon"]:not([data-theme="light"]) { --accent-line: #3dff5c; --today: #5cf27a;
-    --bg: #1d1c1a; --paper: #262522; --hover: #302e2a; --soft: #34322d; --line: #3a3833; --muted: #9a9387; }
-}
-:root[data-theme="dark"][data-accent="neon"] { --accent-line: #3dff5c; --today: #5cf27a;
-  --bg: #1d1c1a; --paper: #262522; --hover: #302e2a; --soft: #34322d; --line: #3a3833; --muted: #9a9387; }
 /* 字體：明體（預設）／黑體 */
 :root[data-font="sans"] body { font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; }
 :root[data-accent="neon"] .pagetabs { border-top-color: var(--accent-line); }
@@ -389,4 +379,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .font-demo { font-size: 16px; line-height: 1; }
 .font-demo.serif { font-family: "Noto Serif TC", serif; }
 .font-demo.sans { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
-.save-btn { padding: 3px 14px; }
+/* 任務頁底部：自動儲存狀態＋儲存按鈕（右下角） */
+.page-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--paper); flex: none; }
+.save-btn { padding: 7px 22px; font-size: 15px; }
+.page { flex: 1 1 auto; overflow: hidden; }

@@ -18,22 +18,23 @@ export function openTask(id, preset = {}, opts = {}) {
   };
   d.remind_at ??= [];
   const occ = orig?.repeat?.freq ? opts.occ : null;
-  let deleted = false;
+  let deleted = false, ready = false, saveTimer = 0;
+  const touch = () => { if (!ready) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => persist(false), 400); };
 
   const blankText = h('span', { class: 'blank' }, '空白');
   const prop = (label, value) => h('div', { class: 'prop' }, h('div', { class: 'prop-k' }, label), value);
 
-  // 各屬性值是固定節點，只更新內容，讓浮動選單能一直貼著它
+  // 各屬性值是固定節點，只更新內容，讓浮動選單能一直貼著它；每次更新也順便排程自動儲存
   const dateV = h('div', { class: 'pv' });
-  const renderDate = () => dateV.replaceChildren(d.date ? fmtWhen(d) : blankText.cloneNode(true));
+  const renderDate = () => (touch(), 0) || dateV.replaceChildren(d.date ? fmtWhen(d) : blankText.cloneNode(true));
   dateV.onclick = () => datePop(dateV, d, renderDate);
 
   const tagV = h('div', { class: 'pv chips' });
-  const renderTags = () => tagV.replaceChildren(...(d.tag_ids.length ? d.tag_ids.map(i => db.get('tags', i)).filter(Boolean).map(t => chip(t)) : [blankText.cloneNode(true)]));
+  const renderTags = () => (touch(), 0) || tagV.replaceChildren(...(d.tag_ids.length ? d.tag_ids.map(i => db.get('tags', i)).filter(Boolean).map(t => chip(t)) : [blankText.cloneNode(true)]));
   tagV.onclick = () => tagPicker(tagV, d.tag_ids, renderTags);
 
   const remindV = h('div', { class: 'pv chips' });
-  const renderRemind = () => remindV.replaceChildren(...(d.reminders.length || d.remind_at.length
+  const renderRemind = () => (touch(), 0) || remindV.replaceChildren(...(d.reminders.length || d.remind_at.length
     ? [...d.reminders.map(m => h('span', { class: 'chip plain' }, remindLabel(m))), ...d.remind_at.map(a => h('span', { class: 'chip plain' }, '⏰ ' + fmtAt(a)))]
     : [blankText.cloneNode(true)]));
   remindV.onclick = () => remindPop(remindV, d, renderRemind);
@@ -42,13 +43,13 @@ export function openTask(id, preset = {}, opts = {}) {
   const status = occ
     ? h('label', { class: 'pv status' },
       h('input', { type: 'checkbox', checked: (d.done_dates || []).includes(occ), onchange: e => {
-        const set = new Set(d.done_dates || []); e.target.checked ? set.add(occ) : set.delete(occ); d.done_dates = [...set];
+        const set = new Set(d.done_dates || []); e.target.checked ? set.add(occ) : set.delete(occ); d.done_dates = [...set]; touch();
       } }), `這一次（${fmtDate(occ)}）已完成`)
     : h('label', { class: 'pv status' },
-      h('input', { type: 'checkbox', checked: d.status === 'done', onchange: e => (d.status = e.target.checked ? 'done' : 'todo') }), '已完成');
+      h('input', { type: 'checkbox', checked: d.status === 'done', onchange: e => { d.status = e.target.checked ? 'done' : 'todo'; touch(); } }), '已完成');
 
   const repeatV = h('div', { class: 'pv' });
-  const renderRepeat = () => repeatV.replaceChildren(d.repeat?.freq && d.date ? repeatLabel(d) : blankText.cloneNode(true));
+  const renderRepeat = () => (touch(), 0) || repeatV.replaceChildren(d.repeat?.freq && d.date ? repeatLabel(d) : blankText.cloneNode(true));
   repeatV.onclick = () => repeatPop(repeatV, d, () => { renderRepeat(); renderDate(); });
 
   const linkV = h('div', { class: 'pv links' });
@@ -65,7 +66,7 @@ export function openTask(id, preset = {}, opts = {}) {
 
   // 重要程度 0–3：點第 n 顆設成 n 星，再點同一顆歸零
   const starV = h('div', { class: 'pv stars-pick' });
-  const renderStars = () => starV.replaceChildren(...[1, 2, 3].map(n => h('span', {
+  const renderStars = () => (touch(), 0) || starV.replaceChildren(...[1, 2, 3].map(n => h('span', {
     class: 'star' + (n <= (d.priority || 0) ? ' on' : ''),
     onclick: () => { d.priority = d.priority === n ? 0 : n; renderStars(); },
   }, '★')), !d.priority ? h('span', { class: 'blank' }, ' 未標記') : null);
@@ -73,11 +74,13 @@ export function openTask(id, preset = {}, opts = {}) {
   renderDate(); renderTags(); renderRemind(); renderLinks(); renderStars(); renderRepeat();
 
   const title = h('textarea', { class: 'page-title', rows: 1, placeholder: '未命名', value: d.title,
-    oninput: e => { d.title = e.target.value.replace(/\n/g, ''); fit(); },
+    oninput: e => { d.title = e.target.value.replace(/\n/g, ''); fit(); touch(); },
+    oncompositionend: touch, onblur: () => persist(false),
     onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); notes.focus(); } } });
   const fit = () => { title.style.height = 'auto'; title.style.height = title.scrollHeight + 'px'; };
-  const notes = h('textarea', { class: 'page-notes', placeholder: '筆記…', value: d.notes || '', oninput: e => (d.notes = e.target.value) });
+  const notes = h('textarea', { class: 'page-notes', placeholder: '筆記…', value: d.notes || '', oninput: e => { d.notes = e.target.value; touch(); }, onblur: () => persist(false) });
 
+  const saved = h('span', { class: 'muted small' }, orig ? '' : '輸入標題後會自動儲存');
   const close = modal(h('div', { class: 'page' },
     h('div', { class: 'page-head' },
       h('span', { class: 'muted small' }, db.currentCal()?.name ?? ''),
@@ -86,27 +89,39 @@ export function openTask(id, preset = {}, opts = {}) {
       orig ? h('button', { class: 'icon', title: '刪除任務', onclick: () => occ
         ? deleteOccurrence(occ, () => { d.skip_dates = [...new Set([...(d.skip_dates || []), occ])]; close(); }, () => { deleted = true; db.remove('tasks', d.id); close(); })
         : confirmBox('刪除這個任務？', () => { deleted = true; db.remove('tasks', d.id); close(); }) }, '刪除') : null,
-      h('button', { class: 'primary save-btn', onclick: () => close() }, '儲存'),
       h('button', { class: 'icon', onclick: () => close() }, '✕')),
     h('div', { class: 'page-body' },
       title,
       h('div', { class: 'props' },
         prop('日期', dateV), prop('重複', repeatV), prop('標籤', tagV), prop('重要', starV), prop('狀態', status), prop('提醒', remindV), prop('流程', linkV)),
-      notes)), { cls: 'page-modal', onClose: save });
+      notes),
+    h('div', { class: 'page-foot' }, saved, h('span', { class: 'spacer' }), h('button', { class: 'primary save-btn', onclick: () => close() }, '儲存'))),
+    { cls: 'page-modal', onClose: () => persist(true) });
 
-  function save() {
+  let exists = !!orig; // 這個任務已經寫進資料了嗎（新任務在第一次自動儲存時建立）
+  function persist(final) {
+    clearTimeout(saveTimer);
     if (deleted) return;
     d.title = title.value.replace(/\n/g, '');
     d.notes = notes.value;
-    if (!d.title.trim()) {
-      if (orig) d.title = orig.title;
-      else { db.all('links', l => l.from === d.id || l.to === d.id).forEach(l => db.remove('links', l.id)); return; }
+    const row = { ...d };
+    if (!row.title.trim()) {
+      if (!final) return;
+      if (orig) row.title = orig.title;
+      else {
+        if (exists) db.remove('tasks', d.id);
+        db.all('links', l => l.from === d.id || l.to === d.id).forEach(l => db.remove('links', l.id));
+        return;
+      }
     }
-    for (const k of ['end_date', 'start_time', 'end_time']) if (!d[k]) d[k] = null;
-    if (d.end_date && (!d.date || d.end_date <= d.date)) d.end_date = null;
-    if (!d.date) d.repeat = null; // 沒日期不能重複
-    db.put('tasks', d);
+    for (const k of ['end_date', 'start_time', 'end_time']) if (!row[k]) row[k] = null;
+    if (row.end_date && (!row.date || row.end_date <= row.date)) row.end_date = null;
+    if (!row.date) row.repeat = null; // 沒日期不能重複
+    db.put('tasks', row);
+    exists = true;
+    saved.textContent = '已自動儲存';
   }
+  ready = true;
   requestAnimationFrame(() => { fit(); if (!orig) title.focus(); });
 }
 
