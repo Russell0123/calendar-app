@@ -51,6 +51,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .swiper::-webkit-scrollbar { display: none; }
 .panel { flex: 0 0 100%; scroll-snap-align: start; overflow-y: auto; padding: 14px 18px 60px; }
 .panel > * { max-width: 1280px; margin-left: auto; margin-right: auto; }
+/* 月曆、課表：電腦上兩側留白，整個月／整天的課要在一個畫面內看完 */
+.panel-calendar > *, .panel-schedule > * { max-width: 1080px; }
 .panel-flow { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 14px; }
 .panel-flow > .flow { width: 100%; }
 
@@ -135,7 +137,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .cal-num span { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 99px; }
 .cal-num.today span { color: var(--today); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--today); }
 .cal-num.sel span { background: var(--ink); color: var(--bg); box-shadow: none; }
-.cal-week { min-height: 124px; }
+/* 六週剛好塞進一個畫面高（扣掉頂欄、頁籤、工具列、星期列約 240px） */
+.cal-week { min-height: max(92px, calc((100dvh - 240px) / 6)); }
 .ev { margin: 0 3px; padding: 1px 6px; border-radius: 3px; font-size: 12px; line-height: 17px; overflow: hidden; cursor: pointer; min-width: 0; }
 .ev:hover { filter: brightness(.96); }
 .ev.cl { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
@@ -151,7 +154,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .ev-more { text-align: center; color: var(--muted); font-size: 13px; line-height: 12px; pointer-events: none; letter-spacing: 1px; }
 
 /* 課表 */
-.tt { display: grid; --tt-label: 34px; --tt-row: 56px; border-top: 2px solid var(--rule); border-left: 1px solid var(--line); }
+.tt { display: grid; --tt-label: 34px; --tt-row: max(40px, calc((100dvh - 250px) / 12)); border-top: 2px solid var(--rule); border-left: 1px solid var(--line); }
 .tt-corner { grid-column: 1; grid-row: 1; border-bottom: 2px solid var(--rule); border-right: 1px solid var(--line); }
 .tt-day { grid-row: 1; text-align: center; font-weight: 800; padding: 6px 0; border-bottom: 2px solid var(--rule); border-right: 1px solid var(--line); }
 .tt-day.today { color: var(--today); }
@@ -187,7 +190,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .board-card .chips { margin-top: 4px; }
 
 /* ---------- 流程圖 ---------- */
-.board-sel { font-weight: 700; }
+.board-sel { font-weight: 700; font-size: 16px; border: none; background: none; padding: 3px 6px; display: flex; gap: 6px; align-items: center; }
+.board-sel .caret { font-size: 11px; color: var(--muted); }
 .flow { position: relative; flex: 1; min-height: 360px; overflow: hidden; background: var(--paper); border: 2px solid var(--rule); border-radius: var(--r); touch-action: none; cursor: grab; outline: none;
   background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px); background-size: 22px 22px; }
 .flow.panning { cursor: grabbing; }

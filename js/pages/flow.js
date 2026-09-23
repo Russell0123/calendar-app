@@ -18,10 +18,8 @@ export function renderFlow(el) {
   boardId = b?.id;
 
   const bar = h('div', { class: 'page-bar' },
-    boards.length ? h('select', { class: 'board-sel', onchange: e => { boardId = e.target.value; renderFlow(el); } },
-      boards.map(x => h('option', { value: x.id, selected: x.id === boardId }, x.title))) : h('b', {}, '流程圖'),
-    b ? h('button', { class: 'icon', title: '流程選項', onclick: e => boardMenu(e.currentTarget, b) }, '⋯') : null,
-    h('button', { onclick: e => ask(e.currentTarget, '流程名稱（例：期末專題）', '', title => { boardId = db.put('boards', { title, nodes: [] }).id; }) }, '＋ 新流程'),
+    h('button', { class: 'board-sel', onclick: e => boardMenu(e.currentTarget, boards, b, el) },
+      h('span', {}, b?.title ?? '流程圖'), h('span', { class: 'caret' }, '▾')),
     h('span', { class: 'spacer' }),
     b ? h('button', { class: 'primary', onclick: e => {
       const btn = e.currentTarget;
@@ -30,7 +28,7 @@ export function renderFlow(el) {
         h('div', { class: 'menu-row', onclick: () => { p.close(); addExisting(btn, b, el); } }, '加入既有任務')), { width: 160 });
     } }, '＋ 任務') : null);
 
-  if (!b) return el.replaceChildren(bar, empty('還沒有流程圖。按「＋ 新流程」替一件大事建立流程。'));
+  if (!b) return el.replaceChildren(bar, empty('還沒有流程圖。點左上「流程圖 ▾」→ 新流程。'));
 
   const nodes = b.nodes.filter(n => db.get('tasks', n.task_id)).map(n => ({ ...n }));
   const onBoard = new Set(nodes.map(n => n.task_id));
@@ -244,8 +242,15 @@ function addExisting(anchor, b, el) {
   setTimeout(() => input.focus(), 30);
 }
 
-function boardMenu(anchor, b) {
+// 流程下拉選單：切換、新增、改名、刪除
+function boardMenu(anchor, boards, b, el) {
   const p = popover(anchor, h('div', { class: 'menu' },
-    h('div', { class: 'menu-row', onclick: () => { p.close(); ask(anchor, '流程名稱', b.title, title => db.put('boards', { id: b.id, title })); } }, '重新命名'),
-    h('div', { class: 'menu-row danger', onclick: () => { p.close(); confirmBox(`刪除流程「${b.title}」？任務本身不會刪除。`, () => db.remove('boards', b.id)); } }, '刪除流程')), { width: 180 });
+    boards.map(x => h('div', { class: 'menu-row', onclick: () => { p.close(); boardId = x.id; renderFlow(el); } },
+      x.title, h('span', { class: 'spacer' }), x.id === b?.id ? '✓' : '')),
+    boards.length ? h('div', { class: 'menu-sep' }) : null,
+    h('div', { class: 'menu-row', onclick: () => { p.close(); ask(anchor, '流程名稱（例：期末專題）', '', title => { boardId = db.put('boards', { title, nodes: [] }).id; }); } }, '＋ 新流程'),
+    b ? [
+      h('div', { class: 'menu-row', onclick: () => { p.close(); ask(anchor, '流程名稱', b.title, title => db.put('boards', { id: b.id, title })); } }, '重新命名'),
+      h('div', { class: 'menu-row danger', onclick: () => { p.close(); confirmBox(`刪除流程「${b.title}」？任務本身不會刪除。`, () => db.remove('boards', b.id)); } }, '刪除這個流程'),
+    ] : null), { width: 220 });
 }
