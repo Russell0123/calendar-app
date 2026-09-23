@@ -132,6 +132,18 @@ const TASK_FIELDS = {
   reminders: { type: 'array', items: { type: 'integer' }, description: '提前幾分鐘提醒，例如 [1440] = 前一天、[60] = 前一小時' },
 };
 
+const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+const COURSE_FIELDS = {
+  name: { type: 'string', description: '課程名稱（課表上顯示的全名）' },
+  weekday: { type: 'integer', minimum: 1, maximum: 7, description: '星期幾：1＝週一 … 7＝週日' },
+  start_period: { type: 'string', enum: PERIODS, description: '第幾節開始：1–10、A、B' },
+  end_period: { type: 'string', enum: PERIODS, description: '第幾節結束；不填＝跟開始同一節' },
+  room: { type: 'string', description: '教室' },
+  teacher: { type: 'string', description: '老師' },
+  subject_tag: { type: 'string', description: '連結的科目標籤名稱（可用簡稱）；不存在會自動建立在「科目」分組' },
+  notes: { type: 'string', description: '筆記' },
+};
+
 // ---------- 工具 ----------
 const TOOLS = [
   {
@@ -178,6 +190,49 @@ const TOOLS = [
     description: '刪除任務。',
     inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
   },
+  {
+    name: 'create_course',
+    description: '在課表新增一門課。會自動連結（或建立）一個「科目」分組的標籤，預設用課名；可用 subject_tag 指定簡稱。同名課程在不同時段請分別新增。',
+    inputSchema: {
+      type: 'object',
+      properties: { ...COURSE_FIELDS, calendar: { type: 'string', description: '行事曆名稱；不填＝第一個行事曆' } },
+      required: ['name', 'weekday', 'start_period'],
+    },
+  },
+  {
+    name: 'update_course',
+    description: '修改課程（id 從 get_calendar_info 的 courses 取得）。只需提供要改的欄位。',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' }, ...COURSE_FIELDS }, required: ['id'] },
+  },
+  {
+    name: 'delete_course',
+    description: '從課表刪除一門課（科目標籤保留）。',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  },
+  {
+    name: 'save_tag',
+    description: '新增或修改標籤：依名稱找，找不到就新增。可改名（new_name，例如把科目改成簡稱）、顏色、分組。改名後所有任務與課程上的標籤會一起變。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '標籤目前的名稱（新增時就是新名稱）' },
+        new_name: { type: 'string', description: '改成的新名稱' },
+        color: { type: 'string', enum: COLORS, description: '顏色' },
+        group: { type: 'string', description: '分組，例如 科目、類型、屬性；空字串＝不分組' },
+        calendar: { type: 'string', description: '行事曆名稱；不填＝第一個行事曆' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'delete_tag',
+    description: '刪除標籤，並從所有任務、課程、視圖上移除。',
+    inputSchema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, calendar: { type: 'string', description: '行事曆名稱；不填＝第一個行事曆' } },
+      required: ['name'],
+    },
+  },
 ];
 
 const HANDLERS: Record<string, (c: Ctx, a: Row) => Promise<unknown>> = {
@@ -195,9 +250,9 @@ const HANDLERS: Record<string, (c: Ctx, a: Row) => Promise<unknown>> = {
           courses: d.courses.filter(x => x.calendar_id === c.id)
             .sort((a, b) => a.day - b.day || a.start - b.start)
             .map(x => ({
-              name: x.name, weekday: '星期' + WEEK[x.day],
+              id: x.id, name: x.name, weekday: '星期' + WEEK[x.day],
               periods: PERIODS[x.start] + (x.end > x.start ? '–' + PERIODS[x.end] : ''),
-              room: x.room || undefined, subject_tag: d.tags.find(t => t.id === x.tag_id)?.name,
+              room: x.room || undefined, teacher: x.teacher || undefined, subject_tag: d.tags.find(t => t.id === x.tag_id)?.name,
             })),
         };
       }),
@@ -268,13 +323,118 @@ const HANDLERS: Record<string, (c: Ctx, a: Row) => Promise<unknown>> = {
     await save(uid, 'tasks', task);
     return { deleted: task.title };
   },
+
+  // ---------- 課表 ----------
+  async create_course({ uid }, a) {
+    if (!a.name?.trim()) throw new Error('name 必填');
+    const d = await load(uid, ['calendars', 'tags']);
+    const cal = pickCalendar(d.calendars, a.calendar);
+    const ts = nowIso();
+    const course: Row = { id: crypto.randomUUID(), calendar_id: cal.id, name: a.name.trim(), room: '', teacher: '', notes: '', created_at: ts, updated_at: ts };
+    applyCourse(course, a, true);
+    course.tag_id = await subjectTag(uid, cal.id, a.subject_tag || course.name, d.tags);
+    await save(uid, 'courses', course);
+    return { created: showCourse(course, d.tags) };
+  },
+
+  async update_course({ uid }, a) {
+    if (!a.id) throw new Error('id 必填');
+    const course = await getRow(uid, 'courses', a.id);
+    const d = await load(uid, ['tags']);
+    if (a.name?.trim()) course.name = a.name.trim();
+    applyCourse(course, a, false);
+    if (a.subject_tag) course.tag_id = await subjectTag(uid, course.calendar_id, a.subject_tag, d.tags);
+    course.updated_at = nowIso();
+    await save(uid, 'courses', course);
+    return { updated: showCourse(course, d.tags) };
+  },
+
+  async delete_course({ uid }, a) {
+    if (!a.id) throw new Error('id 必填');
+    const course = await getRow(uid, 'courses', a.id);
+    course.deleted_at = course.updated_at = nowIso();
+    await save(uid, 'courses', course);
+    return { deleted: course.name };
+  },
+
+  // ---------- 標籤 ----------
+  async save_tag({ uid }, a) {
+    if (!a.name?.trim()) throw new Error('name 必填');
+    if (a.color && !COLORS.includes(a.color)) throw new Error('顏色只能是：' + COLORS.join('、'));
+    const d = await load(uid, ['calendars', 'tags']);
+    const cal = pickCalendar(d.calendars, a.calendar);
+    const inCal = d.tags.filter(t => t.calendar_id === cal.id);
+    let tag = inCal.find(t => t.name === a.name.trim());
+    const ts = nowIso();
+    const isNew = !tag;
+    if (!tag) tag = { id: crypto.randomUUID(), calendar_id: cal.id, name: a.name.trim(), color: 'gray', group: null, order: inCal.length, created_at: ts };
+    if (a.new_name?.trim()) {
+      if (inCal.some(t => t.name === a.new_name.trim() && t.id !== tag!.id)) throw new Error(`已經有叫「${a.new_name}」的標籤`);
+      tag.name = a.new_name.trim();
+    }
+    if (a.color) tag.color = a.color;
+    if (a.group !== undefined) tag.group = a.group.trim() || null;
+    tag.updated_at = ts;
+    await save(uid, 'tags', tag);
+    return { [isNew ? 'created' : 'updated']: { name: tag.name, color: tag.color, group: tag.group } };
+  },
+
+  async delete_tag({ uid }, a) {
+    const d = await load(uid, ['calendars', 'tags', 'tasks', 'courses', 'views']);
+    const cal = pickCalendar(d.calendars, a.calendar);
+    const tag = d.tags.find(t => t.calendar_id === cal.id && t.name === a.name);
+    if (!tag) throw new Error(`找不到標籤「${a.name}」`);
+    const ts = nowIso();
+    let touched = 0;
+    for (const t of d.tasks) if (t.tag_ids?.includes(tag.id)) { t.tag_ids = t.tag_ids.filter((x: string) => x !== tag.id); t.updated_at = ts; await save(uid, 'tasks', t); touched++; }
+    for (const c of d.courses) if (c.tag_id === tag.id) { c.tag_id = null; c.updated_at = ts; await save(uid, 'courses', c); }
+    for (const v of d.views) if (v.filter?.tag_ids?.includes(tag.id)) { v.filter.tag_ids = v.filter.tag_ids.filter((x: string) => x !== tag.id); v.updated_at = ts; await save(uid, 'views', v); }
+    tag.deleted_at = tag.updated_at = ts;
+    await save(uid, 'tags', tag);
+    return { deleted: tag.name, removed_from_tasks: touched };
+  },
 };
+
+// 課程欄位：星期 1–7 → 0–6（週日＝0）；節次標籤 → 索引
+function applyCourse(c: Row, a: Row, isNew: boolean) {
+  if (a.weekday !== undefined) {
+    if (!(a.weekday >= 1 && a.weekday <= 7)) throw new Error('weekday 要是 1–7');
+    c.day = a.weekday % 7;
+  } else if (isNew) throw new Error('weekday 必填');
+  const idx = (p: string) => { const i = PERIODS.indexOf(String(p)); if (i < 0) throw new Error(`節次只能是 ${PERIODS.join('、')}`); return i; };
+  if (a.start_period !== undefined) c.start = idx(a.start_period);
+  else if (isNew) throw new Error('start_period 必填');
+  if (a.end_period !== undefined) c.end = idx(a.end_period);
+  else if (isNew || c.end < c.start) c.end = c.start;
+  if (c.end < c.start) c.end = c.start;
+  for (const k of ['room', 'teacher', 'notes']) if (a[k] !== undefined) c[k] = a[k];
+}
+
+// 科目標籤：同名就沿用，沒有就建立在「科目」分組（灰色）
+async function subjectTag(uid: string, calId: string, name: string, tags: Row[]) {
+  const hit = tags.find(t => t.calendar_id === calId && t.name === name.trim());
+  if (hit) return hit.id;
+  const ts = nowIso();
+  const t = { id: crypto.randomUUID(), calendar_id: calId, name: name.trim(), color: 'gray', group: '科目', order: tags.filter(x => x.calendar_id === calId).length, created_at: ts, updated_at: ts };
+  await save(uid, 'tags', t);
+  tags.push(t);
+  return t.id;
+}
+
+const showCourse = (c: Row, tags: Row[]) => ({
+  id: c.id, name: c.name, weekday: '星期' + WEEK[c.day],
+  periods: PERIODS[c.start] + (c.end > c.start ? '–' + PERIODS[c.end] : ''),
+  room: c.room || undefined, teacher: c.teacher || undefined,
+  subject_tag: tags.find(t => t.id === c.tag_id)?.name,
+});
 
 const INSTRUCTIONS = [
   '這是使用者自己的行事曆 App。',
   '開始時先呼叫 get_calendar_info 取得今天日期（台灣時間）、行事曆、標籤與課表，再把「明天、下週三」等換算成 YYYY-MM-DD。',
   '標籤用名稱指定：課程相關的任務加上該課的 subject_tag，考試／作業等加上對應標籤。',
   '修改或刪除前先用 list_tasks 找到 id。新增前可先查一下避免重複。',
+  '課表：課程 id 在 get_calendar_info 的 courses 裡；每門課連一個「科目」標籤，想改簡稱用 save_tag 的 new_name。',
+  '一個帳號可以有多個行事曆；使用者沒指定時用第一個，指定時在 calendar 參數填行事曆名稱。',
   '完成後用一兩句話告訴使用者做了什麼。',
 ].join('\n');
 
