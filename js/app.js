@@ -15,7 +15,11 @@ db.init();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用
 let syncStatus = null;
-import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); }).catch(e => console.warn('同步未啟動', e));
+// 國定假日在第一次同步完成後才匯入，避免新裝置在拿到雲端資料前重複建立
+const importHolidays = () => import('./holidays.js').then(m => m.autoImport()).catch(e => console.warn('假日匯入失敗', e));
+import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); })
+  .catch(e => console.warn('同步未啟動', e))
+  .finally(importHolidays);
 
 // 課表 ← 首頁 → 月曆／看板 → 流程圖
 const PAGES = [['schedule', '課表', renderSchedule], ['home', '首頁', renderHome], ['calendar', '月曆', renderCalendar], ['flow', '流程圖', renderFlow]];

@@ -218,9 +218,13 @@ export function addLink(from, to) {
 }
 
 // ---------- 外部匯入（Google 日曆等） ----------
-export function ensureTag(name, color = 'gray') {
-  return tagByName(name)?.id || rawPut('tags', { name, color, group: null, order: tags().length }).id;
+export function ensureTag(name, color = 'gray', cal = calId()) {
+  const inCal = all('tags', t => t.calendar_id === cal);
+  return inCal.find(t => t.name === name)?.id || rawPut('tags', { calendar_id: cal, name, color, group: null, order: inCal.length }).id;
 }
+
+// 這個 id 是否出現過（包含已刪除的）：自動匯入時用來避免把使用者刪掉的東西又加回來
+export const everExisted = (table, id) => !!state[table][id];
 
 // 以 ext_id 對應：已匯入過的只更新標題／日期／時間，保留你改過的狀態、標籤、提醒、筆記
 export function importTasks(rows, tagId) {

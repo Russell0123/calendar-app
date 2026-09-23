@@ -23,6 +23,16 @@ export function openSettings() {
       sec('提醒',
         h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準')),
 
+      sec('國定假日',
+        h('div', { class: 'row wrap' },
+          h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: db.meta().auto_holidays !== false,
+            onchange: e => { db.setMeta({ auto_holidays: e.target.checked }); if (e.target.checked) import('./holidays.js').then(m => m.autoImport()); } }), '自動加入今年和明年的國定假日'),
+          h('button', { onclick: async () => {
+            const m = await import('./holidays.js');
+            const n = await m.autoImport({ force: true }).catch(() => -1);
+            toast(n < 0 ? '無法取得假日資料' : n ? `已加入 ${n} 筆假日` : '假日都已經是最新的');
+          } }, '立即更新'))),
+
       sec('行事曆',
         cals.map(c => h('div', { class: 'set-row' + (c.id === cur?.id ? ' cur' : '') },
           h('input', { type: 'radio', name: 'cal', checked: c.id === cur?.id, onchange: () => { db.setMeta({ current_calendar_id: c.id }); render(); } }),
