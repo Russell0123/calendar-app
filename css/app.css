@@ -369,7 +369,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 /* ---------- 主題色（設定 → 外觀）：--accent 按鈕／選取的底色、--on-accent 上面的字、--accent-line 強調邊線 ---------- */
 :root { --accent: var(--ink); --on-accent: var(--bg); --accent-line: var(--ink); }
 :root[data-accent="neon"] { --accent: #3dff5c; --on-accent: #0f2410; --accent-line: #1f9e37; --today: #1f9e37;
-  --bg: #ffffff; --paper: #ffffff; --hover: #f1f3f1; --soft: #eceeec; --line: #e1e4e1; --muted: #858a85; }
+  --bg: #ffffff; --paper: #ffffff; --hover: #f1f3f1; --soft: #eceeec; --line: #e1e4e1; --muted: #858a85; --rule: #c5cac5; }
 @media (prefers-color-scheme: dark) {
   :root[data-accent="neon"]:not([data-theme="light"]) { --accent-line: #3dff5c; --today: #5cf27a;
     --bg: #1d1c1a; --paper: #262522; --hover: #302e2a; --soft: #34322d; --line: #3a3833; --muted: #9a9387; }

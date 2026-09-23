@@ -43,7 +43,14 @@ export const COLORS = {
   yellow: ['#ede0b8', '#6b571a', '黃'], green: ['#d6e0cf', '#3d5a35', '綠'], blue: ['#d3dde4', '#34516a', '藍'],
   purple: ['#ddd6e3', '#54436b', '紫'], pink: ['#ead5da', '#7a3f52', '粉'], red: ['#eacfc7', '#8a3b2c', '紅'],
 };
-export const colorOf = name => COLORS[name] || COLORS.gray;
+// 螢光綠主題：標籤改成更淺、更鮮豔的配色
+const NEON_COLORS = {
+  gray: ['#eef0ee', '#5a605a'], darkgray: ['#d9ddd9', '#262a26'], brown: ['#f7e6d6', '#8a4f22'], orange: ['#ffe4c7', '#c25800'],
+  yellow: ['#fff6bf', '#8a6d00'], green: ['#dcffdf', '#11892b'], blue: ['#dcefff', '#0a63c9'],
+  purple: ['#f0e3ff', '#6d2fc4'], pink: ['#ffe1f1', '#c4186d'], red: ['#ffe1dd', '#d1321d'],
+};
+const isNeon = () => document.documentElement.dataset.accent === 'neon';
+export const colorOf = name => (isNeon() ? NEON_COLORS[name] || NEON_COLORS.gray : COLORS[name] || COLORS.gray);
 
 export function chip(tag, attrs = {}, ...extra) {
   const [bg, fg] = colorOf(tag.color);
@@ -51,10 +58,10 @@ export function chip(tag, attrs = {}, ...extra) {
 }
 
 // 任務顯示色：只有灰色標籤→灰；恰好一種其他顏色→該色；兩種以上→略深的灰
-const MIXED = ['#d5cfc3', '#2b2a27'];
+const MIXED = ['#d5cfc3', '#2b2a27'], NEON_MIXED = ['#e4e8e4', '#1f231f'];
 export function taskColor(t) {
   const colors = [...new Set(db.taskTags(t).map(x => x.color).filter(c => c && c !== 'gray'))];
-  if (colors.length > 1) return MIXED;
+  if (colors.length > 1) return isNeon() ? NEON_MIXED : MIXED;
   return colorOf(colors[0] || 'gray');
 }
 
