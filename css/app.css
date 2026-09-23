@@ -389,3 +389,4 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .font-demo { font-size: 16px; line-height: 1; }
 .font-demo.serif { font-family: "Noto Serif TC", serif; }
 .font-demo.sans { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+.save-btn { padding: 3px 14px; }

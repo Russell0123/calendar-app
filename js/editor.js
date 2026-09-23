@@ -86,6 +86,7 @@ export function openTask(id, preset = {}, opts = {}) {
       orig ? h('button', { class: 'icon', title: '刪除任務', onclick: () => occ
         ? deleteOccurrence(occ, () => { d.skip_dates = [...new Set([...(d.skip_dates || []), occ])]; close(); }, () => { deleted = true; db.remove('tasks', d.id); close(); })
         : confirmBox('刪除這個任務？', () => { deleted = true; db.remove('tasks', d.id); close(); }) }, '刪除') : null,
+      h('button', { class: 'primary save-btn', onclick: () => close() }, '儲存'),
       h('button', { class: 'icon', onclick: () => close() }, '✕')),
     h('div', { class: 'page-body' },
       title,
@@ -95,6 +96,8 @@ export function openTask(id, preset = {}, opts = {}) {
 
   function save() {
     if (deleted) return;
+    d.title = title.value.replace(/\n/g, '');
+    d.notes = notes.value;
     if (!d.title.trim()) {
       if (orig) d.title = orig.title;
       else { db.all('links', l => l.from === d.id || l.to === d.id).forEach(l => db.remove('links', l.id)); return; }

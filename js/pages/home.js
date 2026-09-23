@@ -33,9 +33,8 @@ export function renderHome(el) {
   });
 
   // 快速輸入：Enter 直接變成今天的任務；「詳細」打開任務頁再補資料
-  const input = h('input', { id: 'quick', class: 'quick-input', placeholder: '記點什麼…',
-    oninput: e => e.target.parentNode.classList.toggle('has', !!e.target.value),
-    onkeydown: e => { if (e.key === 'Enter') addToday(); } });
+  const input = h('input', { id: 'quick', class: 'quick-input', placeholder: '記點什麼…', enterkeyhint: 'done',
+    oninput: e => e.target.closest('.quick').classList.toggle('has', !!e.target.value) });
   const addToday = () => {
     const v = input.value.trim(); if (!v) return;
     db.put('tasks', { title: v, notes: '', date: t, end_date: null, start_time: null, end_time: null, status: 'todo', priority: 0, tag_ids: [], reminders: [] });
@@ -47,10 +46,10 @@ export function renderHome(el) {
       h('div', { class: 'home-art' }, h('img', { src: '20260729.png', alt: '' })),
       h('div', { class: 'home-head' },
       h('div', {}, h('div', { class: 'big-date' }, `${d.getMonth() + 1}月${d.getDate()}日`), h('div', { class: 'muted' }, `星期${WEEK[d.getDay()]}`)),
-      h('div', { class: 'quick' }, input,
+      h('form', { class: 'quick', onsubmit: e => { e.preventDefault(); addToday(); } }, input,
         h('div', { class: 'quick-btns' },
-          h('button', { onclick: addToday }, '記下'),
-          h('button', { onclick: () => { const v = input.value.trim(); window.openTask(null, { title: v, date: t }); input.value = ''; } }, '詳細'))))),
+          h('button', { type: 'submit' }, '記下'),
+          h('button', { type: 'button', onclick: () => { const v = input.value.trim(); window.openTask(null, { title: v, date: t }); input.value = ''; } }, '詳細'))))),
     h('div', { class: 'home-grid' },
       h('section', { class: 'block today-block' }, h('h3', {}, '今天'), todayList),
       h('div', { class: 'home-side' },

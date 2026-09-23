@@ -66,6 +66,13 @@ export function taskColor(t) {
 }
 
 // ---------- 彈窗 ----------
+const modalStack = [];
+let skipPop = 0;
+addEventListener('popstate', () => {
+  if (skipPop) { skipPop--; return; }
+  modalStack[modalStack.length - 1]?.(true);
+});
+
 export function modal(body, { onClose, cls = '' } = {}) {
   const bg = h('div', { class: 'modal-bg', onmousedown: e => { if (e.target === bg) close(); } });
   const box = h('div', { class: 'modal ' + cls }, body);
@@ -73,7 +80,17 @@ export function modal(body, { onClose, cls = '' } = {}) {
   document.body.append(bg);
   const esc = e => { if (e.key === 'Escape' && !document.querySelector('.pop') && bg === [...document.querySelectorAll('.modal-bg')].pop()) close(); };
   document.addEventListener('keydown', esc);
-  function close() { if (!bg.isConnected) return; document.removeEventListener('keydown', esc); bg.remove(); onClose?.(); }
+  modalStack.push(close);
+  history.pushState({ modal: modalStack.length }, '');
+  function close(fromBack) {
+    if (!bg.isConnected) return;
+    // 先讓輸入框失去焦點：手機輸入法會在這時把組字中的文字確定下來
+    if (bg.contains(document.activeElement)) document.activeElement.blur();
+    document.removeEventListener('keydown', esc);
+    modalStack.splice(modalStack.indexOf(close), 1);
+    if (fromBack !== true) { skipPop++; history.back(); }
+    bg.remove(); onClose?.();
+  }
   return close;
 }
 
