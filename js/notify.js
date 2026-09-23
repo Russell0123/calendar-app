@@ -14,7 +14,7 @@ let LN = null, timer = null;
 
 export async function initNotifications() {
   if (!isApp()) return;
-  const { registerPlugin } = await import('https://cdn.jsdelivr.net/npm/@capacitor/core@8.5.2/+esm');
+  const { registerPlugin } = await import('../vendor/capacitor.js');
   LN = registerPlugin('LocalNotifications');
   await LN.requestPermissions().catch(() => {});
   // 點通知 → 打開那個任務

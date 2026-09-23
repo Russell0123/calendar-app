@@ -1,6 +1,6 @@
 // 雲端同步（Supabase）：本機優先、有網路就上傳下載，另一台裝置改了即時推送過來
 // 衝突規則：同一筆資料以 updated_at 較新的為準
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from '../vendor/supabase.js'; // 打包在專案裡，不用每次從網路載入
 import * as db from './db.js';
 import { h, modal } from './ui.js';
 

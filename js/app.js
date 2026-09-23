@@ -13,6 +13,7 @@ import { renderFlow, showBoard } from './pages/flow.js';
 
 window.openTask = openTask;
 db.init();
+const isNative = !!window.Capacitor?.isNativePlatform?.();
 // 外觀：主題色（黑／螢光綠）、字體（明體／黑體）
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 const applyAccent = () => {
@@ -28,18 +29,21 @@ darkQuery.addEventListener('change', applyAccent);
 // 新版偵測：App 從背景回來時比對 version.json，有更新就重新載入（手機 App 常駐背景，不會自己重開）
 let loadedVersion = null;
 const fetchVersion = () => fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(j => j.v).catch(() => null);
-fetchVersion().then(v => (loadedVersion = v));
+if (!isNative) fetchVersion().then(v => (loadedVersion = v));
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden || !loadedVersion) return;
   const v = await fetchVersion();
   if (v && v !== loadedVersion && !document.querySelector('.modal-bg')) location.reload();
 });
 // 網路優先的快取：更新馬上看得到，離線也能開
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
+if (!isNative && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用
 let syncStatus = null;
 // Android App 裡才啟用手機提醒
-if (window.Capacitor?.isNativePlatform?.()) import('./notify.js').then(m => m.initNotifications()).catch(e => console.warn('提醒未啟動', e));
+if (isNative) {
+  import('./notify.js').then(m => m.initNotifications()).catch(e => console.warn('提醒未啟動', e));
+  import('./native.js').then(m => m.initNative()).catch(e => console.warn('返回鍵／小工具未啟動', e));
+}
 
 // 國定假日在第一次同步完成後才匯入，避免新裝置在拿到雲端資料前重複建立
 const importHolidays = () => import('./holidays.js').then(m => m.autoImport()).catch(e => console.warn('假日匯入失敗', e));
@@ -88,6 +92,7 @@ function calMenu(anchor) {
 // 自己做切頁動畫：瀏覽器的 smooth scroll 碰上 scroll-snap 常常停在半路
 let anim = 0, guard = 0;
 function goto(i, smooth = true) {
+  if (!panels[i]) return;
   const to = panels[i].offsetLeft, from = swiper.scrollLeft;
   cancelAnimationFrame(anim); clearTimeout(guard);
   swiper.style.scrollSnapType = 'none';
@@ -108,6 +113,7 @@ function renderTabs() {
 }
 
 swiper.addEventListener('scroll', () => {
+  if (!swiper.clientWidth) return; // 視窗縮到 0 寬（隱藏）時不要算出錯的頁數
   const i = Math.round(swiper.scrollLeft / swiper.clientWidth);
   if (i !== current) { current = i; renderTabs(); }
 }, { passive: true });

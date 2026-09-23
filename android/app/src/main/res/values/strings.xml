@@ -1,7 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">omoshiroi calendar</string>
-    <string name="title_activity_main">omoshiroi calendar</string>
+    <string name="app_name">CATlandar</string>
+    <string name="title_activity_main">CATlandar</string>
     <string name="package_name">io.github.russell0123.calendar</string>
     <string name="custom_url_scheme">io.github.russell0123.calendar</string>
+    <string name="widget_name">CATlandar 月曆</string>
+    <string name="widget_desc">跟 App 一樣的月曆，顯示每天的任務</string>
 </resources>

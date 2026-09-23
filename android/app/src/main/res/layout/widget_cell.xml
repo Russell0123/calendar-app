@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 一天：日期數字＋最多 3 個任務色條；格子之間留 0.5dp 露出底色當格線 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cell"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_margin="0.5dp"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:padding="1dp">
+
+    <TextView
+        android:id="@+id/cell_day"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:paddingRight="2dp"
+        android:textSize="10sp" />
+
+    <LinearLayout
+        android:id="@+id/cell_events"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</LinearLayout>
