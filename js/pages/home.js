@@ -1,6 +1,6 @@
 // 首頁：像助理的白板。今天的行程、任務、隨手記排在一起
 import * as db from '../db.js';
-import { h, taskRow, empty, today, addDays, parseYmd, WEEK, fmtDate } from '../ui.js';
+import { h, taskRow, empty, today, addDays, parseYmd, WEEK, fmtDate, modal } from '../ui.js';
 import { PERIODS } from '../periods.js';
 import { courseTasks } from './schedule.js';
 
@@ -23,7 +23,16 @@ export function renderHome(el) {
   const upcoming = db.tasks(x => x.date && x.date > t && x.date <= addDays(t, 7)).sort(db.sortByDate);
   const byDay = {};
   upcoming.forEach(x => (byDay[x.date] ??= []).push(x));
-  const unscheduled = db.tasks(x => !x.date && x.status !== 'done').sort((a, b) => a.created_at.localeCompare(b.created_at));
+  // 待安排：依星數分組（多→少），同組新的在前；首頁最多 15 項
+  const unscheduled = db.tasks(x => !x.date && x.status !== 'done')
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0) || b.created_at.localeCompare(a.created_at));
+  const shown = unscheduled.slice(0, HOME_LIMIT);
+  const pending = [];
+  shown.forEach((x, i) => {
+    const p = x.priority || 0;
+    if (i === 0 || p !== (shown[i - 1].priority || 0)) pending.push(h('div', { class: 'prio-label' }, p ? '★'.repeat(p) : '未標記'));
+    pending.push(taskRow(x));
+  });
 
   const input = h('input', { id: 'quick', class: 'quick-input', placeholder: '記點什麼…',
     oninput: e => e.target.parentNode.classList.toggle('has', !!e.target.value),
@@ -51,7 +60,29 @@ export function renderHome(el) {
             h('div', { class: 'day-label' }, fmtDate(day)), list.map(x => taskRow(x, { showDate: false })))) : empty('沒有')),
         h('section', { class: 'block' },
           h('h3', {}, '待安排'),
-          unscheduled.length ? unscheduled.map(x => taskRow(x)) : empty('沒有'))))));
+          unscheduled.length ? pending : empty('沒有'),
+          h('button', { class: 'add', onclick: openAllTasks }, `顯示全部${unscheduled.length > HOME_LIMIT ? `（還有 ${unscheduled.length - HOME_LIMIT} 項）` : ''}`))))));
+}
+
+const HOME_LIMIT = 15;
+
+// 全部任務列表：依建立時間新到舊；可切換只看待安排或所有任務
+function openAllTasks() {
+  let mode = 'pending';
+  const list = h('div', { class: 'all-list' });
+  const seg = h('div', { class: 'seg' });
+  const render = () => {
+    const items = db.tasks(x => mode === 'all' || (!x.date && x.status !== 'done')).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    seg.replaceChildren(...[['pending', '待安排'], ['all', '所有任務']].map(([k, l]) =>
+      h('button', { class: mode === k ? 'on' : '', onclick: () => { mode = k; render(); } }, l)));
+    list.replaceChildren(h('div', { class: 'muted small' }, `${items.length} 項・新到舊`), ...(items.length ? items.map(x => taskRow(x)) : [empty('沒有')]));
+  };
+  const close = modal(h('div', { class: 'page' },
+    h('div', { class: 'page-head' }, seg, h('span', { class: 'spacer' }), h('button', { class: 'icon', onclick: () => close() }, '✕')),
+    h('div', { class: 'page-body' }, list)), { cls: 'page-modal' });
+  render();
+  // 在清單裡勾完成或編輯後即時更新
+  db.onChange(() => list.isConnected && render());
 }
 
 const withTime = (time, row) => { row.prepend(h('span', { class: 'time' }, time)); return row; };

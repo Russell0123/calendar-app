@@ -10,7 +10,7 @@ export function openTask(id, preset = {}) {
   const orig = id ? db.get('tasks', id) : null;
   const d = orig ? structuredClone(orig) : {
     id: db.uid(), title: '', notes: '', date: null, end_date: null, start_time: null, end_time: null,
-    status: 'todo', tag_ids: [], reminders: [], ...preset,
+    status: 'todo', priority: 0, tag_ids: [], reminders: [], ...preset,
   };
   let deleted = false;
 
@@ -45,7 +45,14 @@ export function openTask(id, preset = {}) {
       ...side('後續', db.all('links', l => l.from === d.id), 'to', other => db.addLink(d.id, other)));
   };
 
-  renderDate(); renderTags(); renderRemind(); renderLinks();
+  // 重要程度 0–3：點第 n 顆設成 n 星，再點同一顆歸零
+  const starV = h('div', { class: 'pv stars-pick' });
+  const renderStars = () => starV.replaceChildren(...[1, 2, 3].map(n => h('span', {
+    class: 'star' + (n <= (d.priority || 0) ? ' on' : ''),
+    onclick: () => { d.priority = d.priority === n ? 0 : n; renderStars(); },
+  }, '★')), !d.priority ? h('span', { class: 'blank' }, ' 未標記') : null);
+
+  renderDate(); renderTags(); renderRemind(); renderLinks(); renderStars();
 
   const title = h('textarea', { class: 'page-title', rows: 1, placeholder: '未命名', value: d.title,
     oninput: e => { d.title = e.target.value.replace(/\n/g, ''); fit(); },
@@ -61,7 +68,7 @@ export function openTask(id, preset = {}) {
     h('div', { class: 'page-body' },
       title,
       h('div', { class: 'props' },
-        prop('日期', dateV), prop('標籤', tagV), prop('狀態', status), prop('提醒', remindV), prop('流程', linkV)),
+        prop('日期', dateV), prop('標籤', tagV), prop('重要', starV), prop('狀態', status), prop('提醒', remindV), prop('流程', linkV)),
       notes)), { cls: 'page-modal', onClose: save });
 
   function save() {

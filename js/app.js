@@ -11,6 +11,8 @@ import { renderFlow } from './pages/flow.js';
 
 window.openTask = openTask;
 db.init();
+// 網路優先的快取：更新馬上看得到，離線也能開
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW 註冊失敗', e));
 // 雲端同步：模組載入失敗（例如離線打不開 CDN）也不影響本機使用
 let syncStatus = null;
 import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); }).catch(e => console.warn('同步未啟動', e));

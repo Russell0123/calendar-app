@@ -111,7 +111,7 @@ export function taskRow(t, { showDate = true } = {}) {
   return h('div', { class: 'task' + (t.status === 'done' ? ' done' : '') },
     h('input', { type: 'checkbox', checked: t.status === 'done', onclick: e => { e.stopPropagation(); db.put('tasks', { id: t.id, status: e.target.checked ? 'done' : 'todo' }); } }),
     h('div', { class: 'task-main', onclick: () => window.openTask(t.id) },
-      h('div', { class: 'task-title' }, t.title || '（未命名）'),
+      h('div', { class: 'task-title' }, t.title || '（未命名）', t.priority ? h('span', { class: 'stars' }, '★'.repeat(t.priority)) : null),
       (showDate && t.date) || t.tag_ids?.length ? h('div', { class: 'task-meta' },
         showDate && t.date ? h('span', { class: 'when' }, fmtWhen(t)) : null, db.taskTags(t).map(o => chip(o))) : null));
 }
