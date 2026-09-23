@@ -76,7 +76,7 @@ async function renderAI(box, sync) {
 
   box.replaceChildren(
     h('div', { class: 'row' }, h('h3', {}, 'AI 助理'), h('span', { class: 'spacer' }), h('button', { class: 'link', onclick: aiHelp }, '教學')),
-    error ? h('div', { class: 'sync-error small' }, '尚未啟用（' + error.message + '）') : [
+    ...(error ? [h('div', { class: 'sync-error small' }, '尚未啟用（' + error.message + '）')] : [
       ...(keys || []).map(k => h('div', { class: 'key-row' },
         h('span', { class: 'mono' }, k.prefix + '…'),
         h('span', { class: 'muted small grow' }, `建立 ${fmt(k.created_at)}・最後使用 ${fmt(k.last_used_at)}`),
@@ -84,7 +84,7 @@ async function renderAI(box, sync) {
           await sync.sb.from('api_keys').delete().eq('id', k.id); renderAI(box, sync);
         }, '撤銷') }, '撤銷'))),
       h('button', { class: 'primary', onclick: create }, '產生 AI 連線網址'),
-    ]);
+    ]));
 }
 
 // 網址只顯示這一次（資料庫只存雜湊）
