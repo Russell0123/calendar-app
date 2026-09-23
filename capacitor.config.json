@@ -1,6 +1,6 @@
 {
   "appId": "io.github.russell0123.calendar",
-  "appName": "omoshiroi calender",
+  "appName": "omoshiroi calendar",
   "webDir": "www",
   "server": {
     "url": "https://russell0123.github.io/calendar-app/",
