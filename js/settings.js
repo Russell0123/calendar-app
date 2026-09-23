@@ -15,19 +15,22 @@ export function openSettings() {
     body), { cls: 'page-modal', onClose: () => file.remove() });
 
   const sec = (title, ...kids) => h('section', { class: 'set-sec' }, h('h3', {}, title), ...kids);
+  const pick = (label, key, def, options) => h('div', { class: 'look-item' }, h('span', { class: 'muted small' }, label),
+    h('div', { class: 'accent-pick' }, options.map(([k, name, icon]) =>
+      h('button', { class: (db.meta()[key] || def) === k ? 'on' : '', onclick: () => { db.setMeta({ [key]: k }); render(); } }, icon, name))));
 
   function render() {
     const cals = db.calendars();
     const cur = db.currentCal();
     body.replaceChildren(
-      sec('外觀',
-        h('div', { class: 'accent-pick' }, [['ink', '黑', '#2b2a27'], ['neon', '螢光綠', '#3dff5c']].map(([k, label, color]) =>
-          h('button', { class: (db.meta().accent || 'ink') === k ? 'on' : '', onclick: () => { db.setMeta({ accent: k }); render(); } },
-            h('span', { class: 'swatch-lg', style: { background: color } }), label)))),
-
       sec('提醒',
         h('label', { class: 'row' }, '沒設時間的任務，提醒以', h('input', { type: 'time', value: db.meta().default_remind_time, onchange: e => db.setMeta({ default_remind_time: e.target.value }) }), '為準'),
         notifyRow()),
+
+      sec('外觀',
+        h('div', { class: 'look' },
+          pick('主題色', 'accent', 'ink', [['ink', '黑', h('span', { class: 'swatch-lg', style: { background: '#2b2a27' } })], ['neon', '螢光綠', h('span', { class: 'swatch-lg', style: { background: '#3dff5c' } })]]),
+          pick('字體', 'font', 'serif', [['serif', '明體', h('span', { class: 'font-demo serif' }, '字')], ['sans', '黑體', h('span', { class: 'font-demo sans' }, '字')]]))),
 
       sec('國定假日',
         h('div', { class: 'row wrap' },

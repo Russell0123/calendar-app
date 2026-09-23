@@ -123,7 +123,7 @@ export function setMeta(patch) {
   if (Object.keys(patch).some(k => SYNCED_META.includes(k))) { state.meta.updated_at = now(); markDirty('meta', 'meta'); }
   emit();
 }
-const SYNCED_META = ['default_remind_time', 'accent'];
+const SYNCED_META = ['default_remind_time', 'accent', 'font'];
 export const calendars = () => all('calendars').sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 export const calId = () => (get('calendars', state.meta.current_calendar_id) || calendars()[0])?.id ?? null;
 export const currentCal = () => get('calendars', calId());

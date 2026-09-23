@@ -11,8 +11,11 @@ import { renderFlow } from './pages/flow.js';
 
 window.openTask = openTask;
 db.init();
-// 主題色：黑（預設）／螢光綠
-const applyAccent = () => (document.documentElement.dataset.accent = db.meta().accent || 'ink');
+// 外觀：主題色（黑／螢光綠）、字體（明體／黑體）
+const applyAccent = () => {
+  document.documentElement.dataset.accent = db.meta().accent || 'ink';
+  document.documentElement.dataset.font = db.meta().font || 'serif';
+};
 applyAccent();
 db.onChange(applyAccent);
 // 網路優先的快取：更新馬上看得到，離線也能開
