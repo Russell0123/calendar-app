@@ -22,6 +22,7 @@ const applyAccent = () => {
   root.dataset.font = m.font || 'serif';
   const mode = m.mode || 'system';
   root.dataset.theme = mode === 'system' ? (darkQuery.matches ? 'dark' : 'light') : mode;
+  try { localStorage.setItem('calapp.look', JSON.stringify({ a: root.dataset.accent, f: root.dataset.font, m: mode })); } catch {}
 };
 applyAccent();
 db.onChange(applyAccent);
@@ -47,7 +48,7 @@ if (isNative) {
 
 // 國定假日在第一次同步完成後才匯入，避免新裝置在拿到雲端資料前重複建立
 const importHolidays = () => import('./holidays.js').then(m => m.autoImport()).catch(e => console.warn('假日匯入失敗', e));
-import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); })
+const synced = import('./sync.js').then(s => { syncStatus = s.status; s.onStatus(renderHeader); return s.start(); })
   .catch(e => console.warn('同步未啟動', e))
   .finally(importHolidays);
 
@@ -129,7 +130,7 @@ swiper.append(...panels);
 app.replaceChildren(header, swiper, tabs);
 db.onChange(draw);
 draw();
-requestAnimationFrame(() => { goto(HOME, false); playIntro(app); });
+requestAnimationFrame(() => { goto(HOME, false); playIntro(app, synced); }); // 開場動畫等雲端任務載入好才開始
 
 // 任務頁「流程」點下去：切到那張流程圖
 window.gotoBoard = id => { showBoard(id); draw(); goto(PAGES.findIndex(p => p[0] === 'flow')); };
