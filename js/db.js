@@ -141,10 +141,15 @@ export const calendars = () => all('calendars').sort((a, b) => (a.order ?? 0) - 
 export const calId = () => (get('calendars', state.meta.current_calendar_id) || calendars()[0])?.id ?? null;
 export const currentCal = () => get('calendars', calId());
 
+const DEFAULT_TAGS = { 類型: ['學業', '工作', '創作', '日常'], 屬性: ['考試', '作業', '行程', '任務', '點子'] };
+
 export function newCalendar(name) {
   const c = rawPut('calendars', { name, order: calendars().length });
   state.meta.current_calendar_id = c.id;
   rawPut('views', { calendar_id: c.id, name: '全部', group: null, filter: { tag_ids: [], range: 'all', status: 'all' }, order: 0 });
+  // 預設標籤：「類型」「屬性」兩組（跟示範用行事曆一樣，全部灰色）
+  let order = 0;
+  Object.entries(DEFAULT_TAGS).forEach(([group, names]) => names.forEach(name => rawPut('tags', { calendar_id: c.id, name, color: 'gray', group, order: order++ })));
   emit();
   import('./holidays.js').then(m => m.autoImport()).catch(e => console.warn('假日匯入失敗', e)); // 新行事曆直接帶國定假日
   return c;
