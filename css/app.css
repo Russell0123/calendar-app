@@ -336,6 +336,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--ink); outli
 .key-row { display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 4px 0; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
 .confirm input.mono { width: 100%; }
+/* 使用說明：每個主題一個折疊區塊 */
+.help-doc details { border-bottom: 1px solid var(--line); }
+.help-doc summary { cursor: pointer; padding: 11px 2px; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; }
+.help-doc summary::-webkit-details-marker { display: none; }
+.help-doc summary::before { content: '›'; color: var(--muted); width: 10px; transition: transform .15s; }
+.help-doc details[open] summary::before { transform: rotate(90deg); }
+.help-text { white-space: pre-line; padding: 0 2px 14px 18px; line-height: 1.8; -webkit-user-select: text; user-select: text; }
 .help ol { padding-left: 22px; line-height: 2; margin: 4px 0 12px; }
 
 /* ---------- 手機 ---------- */

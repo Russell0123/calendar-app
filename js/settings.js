@@ -2,6 +2,7 @@
 import * as db from './db.js';
 import { h, modal, toast } from './ui.js';
 import { timeButton } from './pickers.js';
+import { openHelp } from './help.js';
 
 export const APP_VERSION = 'v1.0.0';
 
@@ -35,7 +36,9 @@ export function openSettings() {
       sec('刪除',
         h('label', { class: 'check' },
           h('input', { type: 'checkbox', checked: db.meta().confirm_delete !== false, onchange: e => db.setMeta({ confirm_delete: e.target.checked }) }),
-          '刪除任務前先確認')));
+          '刪除任務前先確認')),
+
+      sec('說明', h('button', { onclick: openHelp }, '使用說明')));
   }
   render();
 }
