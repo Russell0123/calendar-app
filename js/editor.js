@@ -147,6 +147,10 @@ function datePop(anchor, d, update) {
         timeButton(d.end_time || null, v => set({ end_time: v || '' }), { placeholder: '時間' })) : null,
       h('div', { class: 'menu-sep' }),
       repeatSection(d, set),
+      h('div', { class: 'menu-sep' }),
+      // 只要提醒、不想佔月曆版面的任務
+      h('label', { class: 'toggle' }, '不顯示在日曆',
+        h('input', { type: 'checkbox', checked: !!d.hide_cal, onchange: e => set({ hide_cal: e.target.checked }) })),
       h('div', { class: 'row' }, h('span', { class: 'spacer' }),
         h('button', { class: 'link', onclick: () => { set({ date: null, end_date: null, start_time: null, end_time: null, repeat: null }); p.close(); } }, '清除日期')));
     p?.place();

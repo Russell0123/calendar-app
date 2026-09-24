@@ -31,7 +31,7 @@ function month(el, bar, root) {
   const first = new Date(y, m - 1, 1);
   const start = new Date(y, m - 1, 1 - first.getDay());
   // 重複任務展開成這 6 週內的每一次
-  const tasks = occurrences(db.tasks(), ymd(start), ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 41)));
+  const tasks = occurrences(db.tasks(x => !x.hide_cal), ymd(start), ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 41)));
   const move = n => { cursor = ymd(new Date(y, m - 1 + n, 1)).slice(0, 7); renderCalendar(root); };
 
   bar.append(

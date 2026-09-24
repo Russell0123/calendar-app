@@ -9,9 +9,10 @@ export function renderHome(el) {
   const t = today();
   const d = parseYmd(t);
 
-  // 今天：只放任務。長按拖曳排過的依 day_order，其餘依時間、建立順序
+  // 今天：只放任務。長按拖曳排過的依 day_order，其餘依時間、建立順序；「不顯示在日曆」的預設排最後
+  const lastKey = x => x.day_order ?? (x.hide_cal ? 2e9 : 1e9);
   const todayTasks = occurrences(db.tasks(), t, t).sort((a, b) =>
-    (a.day_order ?? 1e9) - (b.day_order ?? 1e9) || (a.start_time || '99').localeCompare(b.start_time || '99') || a.created_at.localeCompare(b.created_at));
+    lastKey(a) - lastKey(b) || (a.start_time || '99').localeCompare(b.start_time || '99') || a.created_at.localeCompare(b.created_at));
   const todayList = h('div', { class: 'today-list' }, todayTasks.map(x => {
     const row = taskRow(x, { showDate: false });
     if (x.start_time) row.querySelector('.task-main').prepend(h('span', { class: 'time inline' }, x.start_time));
@@ -20,7 +21,8 @@ export function renderHome(el) {
   }));
   sortable(todayList, ids => db.putMany('tasks', ids.map((id, i) => ({ id, day_order: i }))));
 
-  const upcoming = occurrences(db.tasks(), addDays(t, 1), addDays(t, 7)).filter(x => x.date > t).sort(db.sortByDate);
+  const upcoming = occurrences(db.tasks(), addDays(t, 1), addDays(t, 7)).filter(x => x.date > t)
+    .sort((a, b) => a.date.localeCompare(b.date) || !!a.hide_cal - !!b.hide_cal || db.sortByDate(a, b));
   const byDay = {};
   upcoming.forEach(x => (byDay[x.date] ??= []).push(x));
   // 待安排：依星數分組（多→少），同組新的在前；首頁最多 15 項

@@ -35,7 +35,7 @@ function sendWidget() {
   const neon = m.accent === 'neon';
   const mode = m.mode || 'system'; // light | dark | system
   const days = {};
-  for (const x of occurrences(db.tasks(), from, to).sort(db.sortByDate)) {
+  for (const x of occurrences(db.tasks(x => !x.hide_cal), from, to).sort(db.sortByDate)) {
     // 淺色、深色兩組顏色都給：「跟隨系統」時由小工具依手機目前的深淺挑
     const [bg, fg] = taskColor(x, { neon, dark: false });
     const [dbg, dfg] = taskColor(x, { neon, dark: true });
