@@ -94,7 +94,7 @@ function month(el, bar, root) {
 // ---------- 看板（可儲存的篩選視圖） ----------
 function boardView(el, bar, root) {
   const views = db.mine('views').sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  let v = db.get('views', viewId) || views[0];
+  let v = views.find(x => x.id === viewId) || views[0]; // 換了行事曆就改用新行事曆的視圖
   if (!v) v = db.put('views', { name: '全部', group: null, filter: { tag_ids: [], range: 'all', status: 'all' }, order: 0 });
   viewId = v.id;
   const f = v.filter ??= { tag_ids: [], range: 'all', status: 'all' };

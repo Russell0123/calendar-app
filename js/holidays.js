@@ -61,10 +61,11 @@ export async function autoImport({ force = false } = {}) {
     for (const cal of cals) {
       const rows = [];
       let tagId = null;
+      const have = db.extIds(cal.id);
       for (const r of items) {
         const id = await stableId(`${cal.id}|holiday${VERSION}|${r.date}`);
-        if (db.everExisted('tasks', id)) continue;
-        tagId ??= db.ensureTag('國定假日', 'darkgray', cal.id);
+        if (db.everExisted('tasks', id) || have.has(`holiday${VERSION}:${r.date}`)) continue;
+        tagId ??= db.ensureTag('國定假日', 'darkgray', cal.id, '類型');
         rows.push({
           id, calendar_id: cal.id, title: r.title, notes: '', date: r.date, end_date: r.end_date,
           start_time: null, end_time: null, status: 'todo', priority: 0,

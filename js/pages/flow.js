@@ -15,7 +15,7 @@ export const showBoard = id => { boardId = id; };
 
 export function renderFlow(el) {
   const boards = db.mine('boards').sort((a, b) => a.created_at.localeCompare(b.created_at));
-  const b = db.get('boards', boardId) || boards[0];
+  const b = boards.find(x => x.id === boardId) || boards[0]; // 換了行事曆就改顯示新行事曆的流程圖
   if (b?.id !== boardId) { view = { x: 40, y: 60, k: 1 }; sel = null; linking = null; }
   boardId = b?.id;
 

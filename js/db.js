@@ -145,7 +145,9 @@ export function newCalendar(name) {
   const c = rawPut('calendars', { name, order: calendars().length });
   state.meta.current_calendar_id = c.id;
   rawPut('views', { calendar_id: c.id, name: '全部', group: null, filter: { tag_ids: [], range: 'all', status: 'all' }, order: 0 });
-  emit(); return c;
+  emit();
+  import('./holidays.js').then(m => m.autoImport()).catch(e => console.warn('假日匯入失敗', e)); // 新行事曆直接帶國定假日
+  return c;
 }
 
 export function copyCalendar(id, name) {
@@ -203,7 +205,12 @@ export function deleteCalendar(id) {
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
 export const tags = () => mine('tags').sort(byOrder);
 // 分組是標籤的選填屬性；依出現順序列出
-export const tagGroups = () => [...new Set(tags().map(t => t.group || ''))];
+// 「類型」「屬性」兩個分組預設就存在（沒有標籤也列出來）
+const BUILTIN_GROUPS = ['類型', '屬性'];
+export const tagGroups = () => {
+  const gs = [...new Set(tags().map(t => t.group || ''))];
+  return [...gs, ...BUILTIN_GROUPS.filter(g => !gs.includes(g))];
+};
 export function taskTags(task) {
   const groups = tagGroups();
   return (task.tag_ids || []).map(id => get('tags', id)).filter(Boolean)
@@ -254,10 +261,12 @@ export function addLink(from, to) {
 }
 
 // ---------- 外部匯入（Google 日曆等） ----------
-export function ensureTag(name, color = 'gray', cal = calId()) {
+export function ensureTag(name, color = 'gray', cal = calId(), group = null) {
   const inCal = all('tags', t => t.calendar_id === cal);
-  return inCal.find(t => t.name === name)?.id || rawPut('tags', { calendar_id: cal, name, color, group: null, order: inCal.length }).id;
+  return inCal.find(t => t.name === name)?.id || rawPut('tags', { calendar_id: cal, name, color, group, order: inCal.length }).id;
 }
+// 這個行事曆裡出現過的外部來源代碼（包含已刪除的）：複製來的行事曆已有假日就不重複加
+export const extIds = cal => new Set(Object.values(state.tasks).filter(t => t.calendar_id === cal && t.ext_id).map(t => t.ext_id));
 
 // 這個 id 是否出現過（包含已刪除的）：自動匯入時用來避免把使用者刪掉的東西又加回來
 export const everExisted = (table, id) => !!state[table][id];
